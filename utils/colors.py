@@ -1,7 +1,3 @@
-# SGR color constants
-# rene-d 2018
-# https://gist.github.com/rene-d/9e584a7dd2935d0f461904b9f2950007
-
 class Colors:
     """ ANSI color codes """
     BLACK = "\033[0;30m"
@@ -33,15 +29,3 @@ class Colors:
         for _ in dir():
             if isinstance(_, str) and _[0] != "_":
                 locals()[_] = ""
-    # else:
-    #     # set Windows console in VT mode
-    #     if __import__("platform").system() == "Windows":
-    #         kernel32 = __import__("ctypes").windll.kernel32
-    #         kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
-    #         del kernel32
-
-
-if __name__ == '__main__':
-    for i in dir(Colors):
-        if i[0:1] != "_" and i != "END":
-            print("{:>16} {}".format(i, getattr(Colors, i) + i + Colors.END))
