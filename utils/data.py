@@ -3,8 +3,6 @@
 from os import path
 from sys import platform
 
-from colors import Colors
-
 # check OS
 assert platform in "darwin", "linux"
 
