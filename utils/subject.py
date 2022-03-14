@@ -1,27 +1,42 @@
 """Subject class"""
 
+from glob import glob
+from math import isnan
+
 import numpy as np
 import pandas as pd
 
 from .constants import *
+from .helpers import *
 
 class Subject:
     
-    def __init__(self, subj, n_parcs=600, n_networks=17, max_length=10):
+    def __init__(self, subj, n_parcs=600, n_networks=17, max_length=10, 
+                 dist=45):
+        
+        # set values
         self.subj = subj
         self.parcs = n_parcs
         self.networks = n_networks
         self.seq_len = max_length
         
-        # subject-specific directories
+        # set subject-specific directories
         self.dirs = {
             k.lower()[:-4]: (v / self.subj) for k,v in data_directories.items()
         }
         self.update_ied_subdirs()
+        self.update_mri_subdirs()
         
-        # update cluster attributes
+        # get arrays and dataframes that are constant
+        self.elec_labels_df = self.fetch_elec_labels_df()
+        self.elec2parc_df = self.fetch_elec2parc_df()
+        self.parc_minEuclidean_byElec = self.fetch_parc_minEuclidean_byElec()
+        
+        # update attributes
         self.update_num_clusters()
         self.update_cluster_types()
+        self.update_source_parcels(dist=dist)
+        self.update_engel_class()
     
     def update_ied_subdirs(self):
         """add ied subdirectories"""
@@ -34,6 +49,15 @@ class Subject:
                          ('source_loc', f'source_localization/{dir_name}')]:
             
             self.dirs[val] = self.dirs['ied'] / dir
+    
+    def update_mri_subdirs(self):
+        """add mri subdirectories"""
+        
+        for val, dir in [('surf', 'surf/xhemi/std141/orig'),
+                         ('general', 'surf/xhemi/std141/orig/general'),
+                         ('align_elec_alt', f'icEEG/align_elec_alt')]:
+            
+            self.dirs[val] = self.dirs['mri'] / dir
     
     def fetch_sequences(self, cluster=None):
         """Fetch electrode sequences and lag times once they have been saved
@@ -53,13 +77,117 @@ class Subject:
         if isinstance(cluster, int):
             suffix = f"_cluster{cluster}"
         
-        seqs_file = self.dirs['seqs'] / f"elecSequences_max{self.seq_len}{suffix}.csv"
+        seqs_file = self.dirs['seqs'] / (f"elecSequences_max{self.seq_len}"
+                                         f"{suffix}.csv")
         seqs = np.loadtxt(seqs_file, dtype=str, delimiter=",")
         
-        delays_file = self.dirs['seqs'] / f"delaySequences_max{self.seq_len}{suffix}.csv"
+        delays_file = self.dirs['seqs'] / (f"delaySequences_max{self.seq_len}"
+                                           f"{suffix}.csv")
         delays = np.loadtxt(delays_file, dtype=float,delimiter=",")
         
         return seqs, delays
+    
+    def fetch_parc_minEuclidean_byElec(self):
+        """Fetch array of minimum Euclidean distances between parcels and 
+        electrodes
+
+        Returns:
+            np.Array: array Euclidean distances with shape (n_parcs, n_elecs)
+        """
+        
+        fpath = self.dirs['sc'] / "parc_minEuclidean_byElec.csv"
+        return np.loadtxt(fpath, delimiter=',', dtype=float)
+    
+    def fetch_node2parc_df(self, hemi):
+        """Fetch node to parcel look-up table for given hemisphere
+
+        Args:
+            hemi (str): hemisphere of interest; must be "LH" or "RH"
+
+        Returns:
+            pd.DataFrame: dataframe with "node" and "parcel" columns
+        """
+        
+        assert hemi.upper() in ("LH", "RH")
+        
+        # column to use
+        if hemi.upper() == "LH":
+            use_idx = 1
+        else:
+            use_idx = 2
+        
+        # load node2parc df
+        node2parc_path = self.dirs['sc'] / "node_to_parc.csv"
+        node2parc_df = pd.read_csv(node2parc_path, usecols=[0,use_idx],
+                                   names=['node', 'parcel'], skiprows=1)
+        
+        return node2parc_df
+    
+    def fetch_elec2parc_df(self):
+        """Fetch elec to parcel look-up table
+        
+        Returns:
+            pd.DataFrame: dataframe with "elecLabel" and "parcNumber" columns
+        """
+    
+        return pd.read_csv((self.dirs['sc'] / "elec_to_parc.csv"))
+    
+    def fetch_elec_labels_df(self):
+        """Fetch df of all electrode names for conversion to index
+        
+        Returns:
+            pd.DataFrame: dataframe with "chanName" as column
+        """
+        
+        # load order of electrodes
+        fpath = self.dirs['sc'] / "elec_labels.csv"
+        return pd.read_csv(fpath, header=None, names=["chanName"])
+    
+    def fetch_normalized_parc2prop_df(self, cluster, dist=45,
+                                      only_geo=False, only_wm=False):
+        """Fetch df with conversion table of parcel number to proportion of 
+        sequences explained.
+
+        Args:
+            cluster (int): number of cluster
+            dist (int, optional): Geodesic search distance in mm. Defaults to 
+                45.
+            only_geo (bool, optional): Use geodesic only method. Defaults to 
+                False.
+            only_wm (bool, optional): Use white matter only method. Defaults to 
+                False.
+
+        Returns:
+            pd.DataFrame: dataframe with index as parcel number and column as 
+                'propExplanatorySpikes'
+        """
+        
+        # if not using combination method, only one input can be set to True
+        assert not (only_geo and only_wm)
+        
+        method = ""
+        if only_geo:
+            method = "_geodesic"
+        elif only_wm:
+            method = "_whiteMatter"
+        
+        fname = (f"*{method}_normalizedCounts_within{dist}_max{self.seq_len}"
+                 f"_cluster{cluster}.csv")
+        fpath_lst = glob(str(self.dirs['source_loc'] / fname))
+        
+        if not (only_geo or only_wm):
+            for fpath in fpath_lst:
+                if ("whiteMatter" in fpath) or ("geodesic" in fpath):
+                    continue
+                else:
+                    parc2prop_path = fpath
+                    break
+        else:
+            parc2prop_path = fpath_lst[0]
+            
+        df = pd.read_csv(parc2prop_path)
+        
+        return df.set_index("parcNumber")
     
     def update_num_clusters(self):
         """update self.num_clusters value"""
@@ -110,8 +238,157 @@ class Subject:
                 self.soz_clusters = [int(clust) for clust in soz_clusters]  
         except IndexError:
             self.soz_clusters = 'Subject not found in ied_soz_clusters.csv'
-        
-        
             
-            
+    def update_source_parcels(self, dist=45):
         
+        valid_sources_all, valid_sources_one = {}, {}
+        
+        for cluster in self.valid_clusters:
+        
+            parc2prop_df = self.fetch_normalized_parc2prop_df(cluster, dist=dist)
+            
+            # get all top source parcels (within 5% of the top source)
+            top_parc = parc2prop_df.sort_values(by=['propExplanatorySpikes'], 
+                                                ascending=False).head(1)
+            top_proportion = top_parc['propExplanatorySpikes'].iloc[0]
+            
+            if top_proportion > 0.5:
+                valid_sources_all[cluster] = set(
+                    parc2prop_df.loc[
+                        parc2prop_df['propExplanatorySpikes'] > (top_proportion - .05)
+                    ].index
+                )
+            else:
+                valid_sources_all[cluster] = set()
+            
+            # as a tiebreaker, choose source parcel closest to most frequent 
+            # leading electrode
+            if len(valid_sources_all[cluster]) > 1:
+                
+                # compute most frequent lead electrode
+                seqs, _ = self.fetch_sequences(cluster)
+                lead = compute_top_lead_elec(seqs)
+                
+                # get lead index
+                lead_idx = self.elec_labels_df[
+                    self.elec_labels_df['chanName'] == lead
+                ].index[0]
+                
+                # find closest parcel to lead_idx
+                top_parc_idxs = [parc - 1 for parc in valid_sources_all[cluster]]
+                min_loc = np.argmin(self.parc_minEuclidean_byElec[top_parc_idxs, lead_idx])
+                valid_sources_one[cluster] = set([top_parc_idxs[min_loc] + 1])
+                
+            else:
+                valid_sources_one[cluster] = valid_sources_all[cluster]
+        
+        self.valid_sources_all = valid_sources_all
+        self.valid_sources_one = valid_sources_one
+    
+    def update_engel_class(self):
+        
+        # load hemi df
+        engel_fpath = data_directories['IED_ANALYSIS_DIR'] / "ied_subj_engelscores.csv"
+        engel_df = pd.read_csv(engel_fpath)
+
+        engel_dict = {'MoreThan24 Engel Class': 'MoreThan24 Months',
+                      'Mo24 Engel Class': 24,
+                      'Mo12 Engel Class': 12
+                    }
+
+        # iterate through engel_df columns from longest time to shortest
+        for col, time in engel_dict.items():
+            # get class from df
+            engel_class = engel_df[engel_df["Patient"] == self.subj][col].iloc[0]
+
+            # set months
+            if type(time) is str:
+                engel_months = engel_df[engel_df["Patient"] == self.subj][time].iloc[0]
+            elif engel_class in ["no_resection","no_outcome","deceased"]:
+                engel_months = np.nan
+            else:
+                engel_months = time
+
+            # if class is not left blank then set class and months
+            try:
+                if isnan(engel_class):
+                    continue
+            except TypeError:
+                self.engel_class = engel_class
+                self.engel_months = engel_months
+                return
+
+        # since none of the class columns were filled-in, set months to np.nan
+        engel_months = np.nan
+
+        self.engel_class = engel_class
+        self.engel_months = engel_months
+    
+    def compute_lead_elec_parc2prop_df(self, cluster):
+        """Compute a lookup table of parcel to proportion explained for leading
+        electrodes
+
+        Args:
+            cluster (int): cluster number
+
+        Returns:
+            pd.DataFrame: dataframe with index = 'parcNumber' and 
+                column = 'propExplanatorySpikes'
+        """
+
+        elec_seqs, _ = self.fetch_sequences(cluster)
+        lead_elecs = elec_seqs[:,0]
+
+        # use normalized parc2prop file as template for lead_elec_df
+        lead_elec_df = self.fetch_normalized_parc2prop_df(cluster)
+        lead_elec_df['propExplanatorySpikes'] = 0
+
+        parc_counts = {}
+        for elec in lead_elecs:
+            # get electrode parcel indices
+            parc_idxs = convert_elec_to_parc(self.elec2parc_df, elec)
+            
+            # update count for each parcel
+            for parc_idx in parc_idxs:
+                parc_counts.setdefault(parc_idx,0)
+                parc_counts[parc_idx] += 1
+
+        # normalize based on total number of sequences
+        n_seqs = elec_seqs.shape[0]
+        normalized_counts = {parc:(count / n_seqs) for parc, count in parc_counts.items()}
+
+        # iterate through normalized counts
+        for parc_idx, prop in normalized_counts.items():
+            # update lead_elec_df proportion
+            lead_elec_df.iloc[parc_idx] = prop
+
+        return lead_elec_df
+    
+    def compute_resected_prop(self, parcel):
+        """Retrieve the resected proportion of a parcel for a given hemisphere
+
+        Args:
+            parcel (int): parcel number in range (1,self.parcs+1)
+
+        Returns:
+            float: proportion of parcel resected
+        """
+
+        if parcel <= (self.parcs / 2):
+            hemi = "LH"
+        else:
+            hemi = "RH"
+            parcel -= int(self.parcs/2)
+
+        node2rsxn_path = self.dirs['sc'] / f"{hemi}_node_to_resection.txt"
+        node2rsxn_df = pd.read_csv(node2rsxn_path, 
+                                   delim_whitespace=True, 
+                                   header=None, 
+                                   names=['node','is_resected']
+                                )
+
+        hemi_node2parc = self.fetch_node2parc_df(hemi)
+        parc_nodes = hemi_node2parc[hemi_node2parc.parcel == parcel].index
+        resected_prop = node2rsxn_df.iloc[parc_nodes].mean()['is_resected']
+
+        return resected_prop
