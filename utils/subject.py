@@ -31,12 +31,16 @@ class Subject:
         self.elec_labels_df = self.fetch_elec_labels_df()
         self.elec2parc_df = self.fetch_elec2parc_df()
         self.parc_minEuclidean_byElec = self.fetch_parc_minEuclidean_byElec()
+        self.node2parc_df_dict = self.fetch_node2parc_df_dict()
         
         # update attributes
         self.update_num_clusters()
         self.update_cluster_types()
         self.update_source_parcels(dist=dist)
         self.update_engel_class()
+        
+        if self.engel_class not in ("no_resection","no_outcome","deceased"):
+            self.node2rsxn_df_dict = self.fetch_node2rsxn_df_dict()
     
     def update_ied_subdirs(self):
         """add ied subdirectories"""
@@ -98,30 +102,28 @@ class Subject:
         fpath = self.dirs['sc'] / "parc_minEuclidean_byElec.csv"
         return np.loadtxt(fpath, delimiter=',', dtype=float)
     
-    def fetch_node2parc_df(self, hemi):
+    def fetch_node2parc_df_dict(self):
         """Fetch node to parcel look-up table for given hemisphere
 
-        Args:
-            hemi (str): hemisphere of interest; must be "LH" or "RH"
-
         Returns:
-            pd.DataFrame: dataframe with "node" and "parcel" columns
+            dict: dictionary of dataframes with "node" and "parcel" columns for
+                each hemisphere
         """
         
-        assert hemi.upper() in ("LH", "RH")
+        node2parc_df_dict = {}
         
-        # column to use
-        if hemi.upper() == "LH":
-            use_idx = 1
-        else:
-            use_idx = 2
+        for hemi, use_idx in [("LH", 1), 
+                              ("RH", 2)]:
         
-        # load node2parc df
-        node2parc_path = self.dirs['sc'] / "node_to_parc.csv"
-        node2parc_df = pd.read_csv(node2parc_path, usecols=[0,use_idx],
-                                   names=['node', 'parcel'], skiprows=1)
-        
-        return node2parc_df
+            # load node2parc df
+            node2parc_path = self.dirs['sc'] / "node_to_parc.csv"
+            node2parc_df = pd.read_csv(node2parc_path, usecols=[0,use_idx],
+                                       names=['node', 'parcel'], skiprows=1)
+            
+            # add to dict
+            node2parc_df_dict[hemi] = node2parc_df
+            
+        return node2parc_df_dict
     
     def fetch_elec2parc_df(self):
         """Fetch elec to parcel look-up table
@@ -189,6 +191,27 @@ class Subject:
         
         return df.set_index("parcNumber")
     
+    def fetch_node2rsxn_df_dict(self):
+        """Create dictionary of node to resection lookup tables for each hemisphere
+
+        Returns:
+            dict: dictionary with keys = hemi and values = dataframe
+        """
+        
+        # create dictionary of node2rsxn_df for each hemisphere of interest
+        node2rsxn_df_dict = {}
+        
+        for hemi in "LH", "RH":
+            node2rsxn_path = self.dirs['sc'] / f"{hemi.upper()}_node_to_resection.txt"
+            node2rsxn_df = pd.read_csv(node2rsxn_path, 
+                                       delim_whitespace=True, 
+                                       header=None, 
+                                       names=['node','is_resected']
+                                    )
+            node2rsxn_df_dict[hemi] = node2rsxn_df
+    
+        return node2rsxn_df_dict
+    
     def update_num_clusters(self):
         """update self.num_clusters value"""
 
@@ -240,6 +263,15 @@ class Subject:
             self.soz_clusters = 'Subject not found in ied_soz_clusters.csv'
             
     def update_source_parcels(self, dist=45):
+        """Update self.valid_sources_all with a set of every possible source 
+        for each cluster. Update self.valid_sources_one with a single source 
+        for each cluster (choosing the one that is closest to the most frequent
+        lead electrode)
+
+        Args:
+            dist (int, optional): geodesic search distance. Defaults to 45.
+        """
+        
         
         valid_sources_all, valid_sources_one = {}, {}
         
@@ -286,6 +318,8 @@ class Subject:
         self.valid_sources_one = valid_sources_one
     
     def update_engel_class(self):
+        """Update self.engel_class and self.engel_months"""
+        
         
         # load hemi df
         engel_fpath = data_directories['IED_ANALYSIS_DIR'] / "ied_subj_engelscores.csv"
@@ -364,31 +398,33 @@ class Subject:
 
         return lead_elec_df
     
-    def compute_resected_prop(self, parcel):
+    def compute_resected_prop(self, parcels):
         """Retrieve the resected proportion of a parcel for a given hemisphere
 
         Args:
-            parcel (int): parcel number in range (1,self.parcs+1)
+            parcels (list): list of int parcels in range (1,self.parcs+1)
 
         Returns:
-            float: proportion of parcel resected
+            list: list of float proportions of parcels resected
         """
+        
+        resected_props = []
+        
+        for parcel in parcels:
+            
+            hemi = get_parcel_hemi(parcel, self.parcs)
+            if hemi == "RH": 
+                parcel -= int(self.parcs / 2)
 
-        if parcel <= (self.parcs / 2):
-            hemi = "LH"
-        else:
-            hemi = "RH"
-            parcel -= int(self.parcs/2)
+            # get hemi_specific df
+            hemi_node2parc = self.node2parc_df_dict[hemi]
+            hemi_node2rsxn = self.node2rsxn_df_dict[hemi]
+            
+            # mask out nodes for parcel and find proportion of nodes resected
+            parc_nodes = hemi_node2parc[hemi_node2parc.parcel == parcel].index
+            resected_prop = hemi_node2rsxn.iloc[parc_nodes].mean()['is_resected']
 
-        node2rsxn_path = self.dirs['sc'] / f"{hemi}_node_to_resection.txt"
-        node2rsxn_df = pd.read_csv(node2rsxn_path, 
-                                   delim_whitespace=True, 
-                                   header=None, 
-                                   names=['node','is_resected']
-                                )
+            # add to list
+            resected_props.append(resected_prop)
 
-        hemi_node2parc = self.fetch_node2parc_df(hemi)
-        parc_nodes = hemi_node2parc[hemi_node2parc.parcel == parcel].index
-        resected_prop = node2rsxn_df.iloc[parc_nodes].mean()['is_resected']
-
-        return resected_prop
+        return resected_props

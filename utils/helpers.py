@@ -143,3 +143,47 @@ def map_func(lst_str, no_index=False):
                 lst_int.append(int(val) - 1)
     
     return lst_int
+
+def get_parcel_hemi(parcel, n_parcs):
+    """For a given parcel number, return the hemisphere of that parcel
+
+    Args:
+        parcel (int): parcel number in range(1,n_parcs+1)
+        n_parcs (int): Schaefer parcellation
+
+    Returns:
+        str: hemisphere ("LH" or "RH")
+    """
+    
+    assert parcel in range(1, n_parcs + 1)
+    
+    if parcel <= (n_parcs / 2):
+        return "LH"
+    else:
+        return "RH"
+    
+def get_prediction_accuracy(engel_class, 
+                            resected_prop,
+                            resected_threshold = 0.5,
+                            sz_free=['1a']):
+    
+    if resected_prop >= resected_threshold:
+        resected = True
+    else:
+        resected = False
+
+    # engel class values that would exclude patient
+    no_outcome = ['no_outcome', 'deceased', 'no_resection']
+    
+    if engel_class in no_outcome:
+        return "N/A"
+    elif engel_class in sz_free:
+        if resected:
+            return "TP"
+        else:
+            return "FN"
+    else:
+        if resected:
+            return "FP"
+        else:
+            return "TN"

@@ -92,7 +92,7 @@ def plot_source_localization(parc2prop, hemi, subj, surfs=['pial','inf_200'],
     general_dir = subj.dirs['general']
     
     # load node2parc_df and set proportion default to zero
-    node2parc_df = subj.fetch_node2parc_df(hemi)
+    node2parc_df = subj.fetch_node2parc_df()[hemi]
     node2parc_df['proportion'] = 0
 
     # get list of possible parcel numbers based on n_parcs and hemi
