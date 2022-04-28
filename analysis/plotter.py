@@ -1,4 +1,6 @@
 import warnings
+
+from utils.helpers import *
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 from nilearn import plotting
@@ -62,79 +64,86 @@ def plot_prop_explained_histogram(parc2prop, hemi, n_parcs=600):
         
     return fig
 
-def plot_source_localization(parc2prop, hemi, subj, surfs=['pial','inf_200'],
-                             n_parcs=600, cmap='Spectral_r'):
+def plot_source_localization(Subj, 
+                             surfs=['pial','inf_200'], 
+                             n_parcs=600, 
+                             cmap='Spectral_r',
+                             dist=45,
+                             only_geo=False,
+                             only_wm=False,
+                             lead_elec=False
+                            ):
     """Run nilearn.plotting.view_surf on a parcel to value df.
 
     Args:
-        parc2prop (pd.DataFrame): dataframe to plot with parcel numbers as 
-            indices and 'propExplanatorySpikes' as the column containing values 
-            to plot
-        hemi (str): hemisphere of interest
-        subj (utils.subject.Subject): instance of Subject class
+        Subj (utils.subject.Subject): instance of Subject class
         surfs (list, optional): surfaces of interest. Defaults to ['pial','inf_200'].
         n_parcs (int, optional): number of Schaefer parcels. Defaults to 600.
         cmap (str, optional): colormap used to display results. Defaults to 'Spectral_r'.
+        dist (int, optional): Geodesic search distance in mm. Defaults to 
+            45.
+        only_geo (bool, optional): Use geodesic only method. Defaults to 
+            False.
+        only_wm (bool, optional): Use white matter only method. Defaults to 
+            False.
+        lead_elec (bool, optional): Plot lead electrode parcels instead of 
+            localization results. Defaults to False.
 
     Returns:
         dict: dictionary with keys = surf names and values = plotting.view_surf
             views; surface can be saved using views['view'].save_as_html(out_path)
-            or opened in a browswer using views['view'].open_in_browser()
+            or opened in a browser using views['view'].open_in_browser()
     """
 
     # check arguments
     assert type(surfs) == list
     assert cmap in plt.colormaps()
-    assert isinstance(subj, Subject)
+    assert isinstance(Subj, Subject)
+    assert (only_geo + only_wm + lead_elec) <= 1
     
     # load directory names
-    surf_dir = subj.dirs['surf']
-    general_dir = subj.dirs['general']
-    
-    # load node2parc_df and set proportion default to zero
-    node2parc_df = subj.fetch_node2parc_df()[hemi]
-    node2parc_df['proportion'] = 0
+    surf_dir = Subj.dirs['surf']
+    general_dir = Subj.dirs['general']
 
-    # get list of possible parcel numbers based on n_parcs and hemi
-    possible_parcs = range(1,(int(n_parcs/2) + 1))
-    if hemi.lower() == "rh":
-        possible_parcs = [(n + int(n_parcs/2)) for n in possible_parcs]
+    master_views = {}
 
-    # update node2parc proportion at each parcel
-    for parc in possible_parcs:
-        if hemi.lower() == "rh":
-            mask = (node2parc_df[f'{hemi.upper()}parcel'] == (parc - int(n_parcs/2)))
+    for n_cluster in Subj.valid_clusters:
+
+        if lead_elec:
+            parc2prop = Subj.compute_lead_elec_parc2prop_df(cluster=n_cluster)
         else:
-            mask = (node2parc_df[f'{hemi.upper()}parcel'] == parc)
-        
-        # get proportion for particular parcel
-        parc_slice = parc2prop[parc2prop.index == parc]
-        proportion = parc_slice['propExplanatorySpikes'].iloc[0]
-        
-        # set all nodes of particular parcel to correct proportion
-        node2parc_df.loc[mask,'proportion'] = proportion
+            parc2prop = Subj.fetch_normalized_parc2prop_df(cluster=n_cluster,
+                                                           dist=dist, 
+                                                           only_geo=only_geo,
+                                                           only_wm=only_wm
+                                                        )
 
-    # load array of sulci contours
-    sulc_file = general_dir / f"std.141.{hemi.lower()}.sulc.1D.dset"
-    sulc_array = np.loadtxt(sulc_file, comments="#")
+        node2prop_arr, hemi = compute_node2prop_arr(parc2prop, 
+                                                    Subj.node2parc_df_dict)
 
-    # initialize dictionary to store views
-    views = {}
-    
-    # iterate through surfs
-    for surf in surfs:
+        # load array of sulci contours
+        sulc_file = general_dir / f"std.141.{hemi.lower()}.sulc.1D.dset"
+        sulc_array = np.loadtxt(sulc_file, comments="#")
 
-        surf_file = surf_dir / f"std.141.{hemi.lower()}.{surf}.gii"
-
-        # plot results
-        view = plotting.view_surf(str(surf_file), 
-                                  node2parc_df.proportion.to_numpy(),
-                                  cmap=cmap, symmetric_cmap=False,
-                                  bg_map=sulc_array, 
-                                  threshold=0.001, vmax=1)
+        # initialize dictionary to store views
+        views = {}
         
-        # add to dictionary
-        views[surf] = view
+        # iterate through surfs
+        for surf in surfs:
+
+            surf_file = surf_dir / f"std.141.{hemi.lower()}.{surf}.gii"
+
+            # plot results
+            view = plotting.view_surf(str(surf_file), 
+                                    node2prop_arr,
+                                    cmap=cmap, symmetric_cmap=False,
+                                    bg_map=sulc_array, 
+                                    threshold=0.001, vmax=1)
+            
+            # add to dictionary
+            views[surf] = view
+            
+        master_views[n_cluster] = views
         
-    return views
+    return master_views
 

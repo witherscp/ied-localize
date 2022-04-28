@@ -20,3 +20,18 @@ data_directories = {
     "FIGURES_DIR": USERS_DIR / "price" / "figures",
     "IED_ANALYSIS_DIR": USERS_DIR / "price" / "ied_analysis"
 }
+
+# propagation parameters
+MAX_WM_VEL = 3
+MIN_WM_VEL = 1.2
+
+MAX_GEO_VEL = 0.45
+MIN_GEO_VEL = 0.25
+
+# Roman numeral conversion list
+NUM_MAP = [(10, 'X'), 
+           (9, 'IX'), 
+           (5, 'V'), 
+           (4, 'IV'), 
+           (1, 'I')
+        ]
