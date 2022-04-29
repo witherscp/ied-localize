@@ -1,0 +1,3 @@
+# ignore directories
+notebooks/**
+**/__pycache__
