@@ -1,6 +1,6 @@
 import warnings
 
-from utils.helpers import *
+from ied_repo.utils.helpers import *
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 from nilearn import plotting
@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator
 import seaborn as sns
 
-from utils.subject import Subject
+from ied_repo.utils.subject import Subject
 
 rc('font', family='TimesNewRoman')
 
