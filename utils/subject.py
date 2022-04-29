@@ -685,11 +685,21 @@ class Subject:
                           axis=1)
 
     def get_cluster_lobe(self, cluster):
+        """Return the majority lobe for all spikes in a given cluster.
+
+        Args:
+            cluster (int): cluster number
+
+        Returns:
+            str: lobe name (frontal, temporal, parietal, occipital, insula,
+                or multilobar)
+        """
 
         seqs, delays = self.fetch_sequences(cluster)
         elec_count_df = retrieve_lead_counts(self.elec_labels_df,
-                                        seqs,
-                                        delays)
+                                             seqs,
+                                             delays
+                                            )
         elec_count_dict = elec_count_df['Within 100ms'].to_dict()
 
         lobe_count_dict = {}
@@ -702,7 +712,14 @@ class Subject:
                 lobe_count_dict.setdefault(lobe,0)
                 lobe_count_dict[lobe] += count
 
-        return lobe_count_dict
+        total_counts = sum(lobe_count_dict.values())
+        top_lobe = max(lobe_count_dict, key=lobe_count_dict.get)
+        
+        # require top lobe to include majority of all spikes
+        if lobe_count_dict[top_lobe] >= (total_counts / 2):
+            return top_lobe
+        else:
+            return "multilobar"
 
     def compute_weighted_source2elec_dist(self, cluster, source=None,
                                           lead_only=False, use_geo=False,

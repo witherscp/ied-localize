@@ -140,7 +140,7 @@ def convert_elec_to_lobe(elec2lobe_df, elec):
     """
     
     lobes = elec2lobe_df[elec2lobe_df['elecLabel'] == elec]['Lobe']
-    return lobes.iloc[0].replace("'",'').strip('[]').split(',')
+    return lobes.iloc[0].replace("'",'').replace(' ','').strip('[]').split(',')
     
 def map_func(lst_str, no_index=False):
     """Map a list of strings to a list of integers
