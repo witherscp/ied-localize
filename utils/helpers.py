@@ -369,3 +369,33 @@ def retrieve_lead_counts(elec_df, seqs, delays, lead_times=[100]):
     out_df.sort_values(out_cols, ascending=False, inplace=True)
     
     return out_df
+
+def compute_mean_seq_length(seqs):
+    """Compute the mean sequence length
+
+    Args:
+        seqs (np.array): sequence of electrodes (n_seqs x n_elecs)
+
+    Returns:
+        float: mean sequence length
+    """
+    
+    return seqs[seqs != 'nan'].size / seqs.shape[0]
+
+def compute_weighted_similarity_length(similarity_arr, seqs):
+    """Compute metric combining similarity of sequences and mean length. My
+    hypothesis is that a combination of greater length and greater similarity 
+    makes it more likely that sequences are closer to the epileptogenic zone.
+
+    Args:
+        similarity_arr (np.array): square matrix of Jaro-Winkler similarities
+        seqs (np.array): sequences of electrodes (n_seqs x n_elecs)
+
+    Returns:
+        _type_: _description_
+    """
+    
+    mean_similarity = np.mean(similarity_arr)
+    mean_length = seqs[seqs != 'nan'].size / seqs.shape[0]
+    
+    return mean_similarity * mean_length
