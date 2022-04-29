@@ -774,3 +774,72 @@ class Subject:
             count_total += count
 
         return dist_sum / count_total
+    
+    def compute_jaro_similarities(self, cluster):
+        """Computes a Jaro-Winkler similarity matrix based on an array of 
+        electrode sequences. Saves out the matrix for future usage.
+        
+        Args:
+            cluster (int): cluster number
+
+        Returns:
+            np.array: n_seq x n_seq similarity matrix
+        """
+
+
+        seqs, _ = self.fetch_sequences(cluster)
+        n_sequences = seqs.shape[0]
+        
+        jaro_similarities = np.zeros((n_sequences, n_sequences))
+
+        # retrieve similarities, ignoring 'nan' values
+        for i in range(n_sequences):
+            seq_i = [elec for elec in seqs[i,:] if elec != 'nan']
+            for j in range(i, n_sequences):
+                seq_j = [elec for elec in seqs[j,:] if elec != 'nan']
+                similarity = jaro.jaro_winkler_metric(seq_i, seq_j)
+                jaro_similarities[i,j] = similarity
+
+        # symmetrize final matrix and convert to distance matrix
+        jaro_similarities = np.fmax(jaro_similarities.T, jaro_similarities)
+        
+        if cluster != None:
+            fpath = self.dirs['seqs'] / (f"cluster{cluster}_similarityMatrix_"
+                                         f"max{self.seq_len}.csv")
+        else:
+            fpath = self.dirs['seqs'] / (f"similarityMatrix_"
+                                         f"max{self.seq_len}.csv")
+        
+        np.savetxt(fpath, 
+                   X=jaro_similarities,
+                   fmt="%.3f",
+                   delimiter=','
+                )
+        
+        return jaro_similarities
+        
+    def retrieve_jaro_similarities(self, cluster):
+        """Retrieve a jaro similarity matrix for a given cluster
+
+        Args:
+            cluster (int): cluster number (None if all sequences)
+
+        Returns:
+            np.array: Jaro-Winkler similarity matrix
+        """
+    
+        if cluster != None:
+            fpath = self.dirs['seqs'] / (f"cluster{cluster}_similarityMatrix_"
+                                         f"max{self.seq_len}.csv")
+        else:
+            fpath = self.dirs['seqs'] / (f"similarityMatrix_"
+                                         f"max{self.seq_len}.csv")
+        
+        if fpath.exists():
+            similarities_arr = np.loadtxt(fpath,
+                                          dtype=float,
+                                          delimiter=",")
+        else:
+            similarities_arr = self.compute_jaro_similarities(cluster)
+        
+        return similarities_arr
