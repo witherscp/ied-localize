@@ -382,6 +382,15 @@ def compute_mean_seq_length(seqs):
     
     return seqs[seqs != 'nan'].size / seqs.shape[0]
 
+def compute_mean_similarity(similarity_arr):
+    """Compute mean sequence similarity
+
+    Returns:
+        float: mean sequence similarity for a given cluster
+    """
+
+    return np.mean(similarity_arr)
+
 def compute_weighted_similarity_length(similarity_arr, seqs):
     """Compute metric combining similarity of sequences and mean length. My
     hypothesis is that a combination of greater length and greater similarity 
@@ -395,8 +404,8 @@ def compute_weighted_similarity_length(similarity_arr, seqs):
         _type_: _description_
     """
     
-    mean_similarity = np.mean(similarity_arr)
-    mean_length = seqs[seqs != 'nan'].size / seqs.shape[0]
+    mean_similarity = compute_mean_similarity(similarity_arr)
+    mean_length = compute_mean_seq_length(seqs)
     
     return mean_similarity * mean_length
     
