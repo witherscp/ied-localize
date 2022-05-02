@@ -401,7 +401,7 @@ def compute_weighted_similarity_length(similarity_arr, seqs):
         seqs (np.array): sequences of electrodes (n_seqs x n_elecs)
 
     Returns:
-        _type_: _description_
+        float: mean similarity weighted by mean length
     """
     
     mean_similarity = compute_mean_similarity(similarity_arr)
