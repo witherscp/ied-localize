@@ -399,3 +399,4 @@ def compute_weighted_similarity_length(similarity_arr, seqs):
     mean_length = seqs[seqs != 'nan'].size / seqs.shape[0]
     
     return mean_similarity * mean_length
+    

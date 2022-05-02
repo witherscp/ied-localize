@@ -41,6 +41,7 @@ class Subject:
         self.parc_minEuclidean_byElec = self._fetch_parc_minEuclidean_byElec()
         self.node2parc_df_dict = self._fetch_node2parc_df_dict()
         self.elec2hemi_df = self._fetch_elec2hemi_df()
+        self.elec_euc_arr = self._fetch_elec_euc_arr()
 
         # update attributes
         self._update_num_clusters()
@@ -82,6 +83,19 @@ class Subject:
 
         fpath = self.dirs['sc'] / "elec_to_hemi.csv"
         return pd.read_csv(fpath)
+
+    def _fetch_elec_euc_arr(self):
+        """Fetch elec_euc_arr to store as self.elec_euc_arr
+        
+        Returns:
+            np.array: n_elec x n_elec array of Euclidean distances
+        """
+
+        fpath = self.dirs['sc'] / "elec_euc_withinHemi.csv"
+        arr = np.loadtxt(fpath, dtype=float)
+        arr[np.diag_indices_from(arr)] = np.NaN
+        
+        return arr
 
     def fetch_sequences(self, cluster=None):
         """Fetch electrode sequences and lag times once they have been saved
@@ -843,3 +857,39 @@ class Subject:
             similarities_arr = self.compute_jaro_similarities(cluster)
         
         return similarities_arr
+    
+    def compute_proportion_neighbors(self, cluster, neighbor_thresh=12.):
+        """Compute the average proportion of neighbor electrodes included 
+        within sequences in a cluster. Hypothesis is that a greater proportion
+        correlates with being closer to epileptogenic zone.
+
+        Args:
+            cluster (int): cluster number
+            neighbor_thresh (float): max euc distance to be considered neighbor
+
+        Returns:
+            float: average proportion of neighbor electrodes firing
+        """
+        
+        seqs, _ = self.fetch_sequences(cluster)
+        n_sequences = seqs.shape[0]
+        
+        intersection_total = 0
+        neighbors_total = 0
+        
+        # iterate through sequences, ignoring 'nan' values
+        for i in range(n_sequences):
+            seq = [elec for elec in seqs[i,:] if elec != 'nan']
+            elec_idxs = [self.get_elec_idx(elec) for elec in seq]
+            
+            # Get the list of all neighbor indices within neighbor threshold
+            neighbors = set(np.argwhere(
+                self.elec_euc_arr[elec_idxs,:] < neighbor_thresh
+            )[:,1])
+            
+            # find the number of intersecting electrodes (neighbors in sequence)
+            intersection = neighbors.intersection(set(elec_idxs))
+            intersection_total += len(intersection)
+            neighbors_total += len(neighbors)
+        
+        return intersection_total / neighbors_total
