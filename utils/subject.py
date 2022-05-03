@@ -54,7 +54,7 @@ class Subject:
             self.node2rsxn_df_dict = self._fetch_node2rsxn_df_dict()
 
     def _update_ied_subdirs(self):
-        """add ied subdirectories"""
+        """Add IED subdirectories."""
 
         dir_name = f"Schaefer_{self.parcs}P_{self.networks}N"
 
@@ -66,7 +66,7 @@ class Subject:
             self.dirs[val] = self.dirs['ied'] / dir
 
     def _update_mri_subdirs(self):
-        """add mri subdirectories"""
+        """Add MRI subdirectories."""
 
         for val, dir in [('surf', 'surf/xhemi/std141/orig'),
                          ('general', 'surf/xhemi/std141/orig/general'),
@@ -75,7 +75,7 @@ class Subject:
             self.dirs[val] = self.dirs['mri'] / dir
 
     def _fetch_elec2hemi_df(self):
-        """Fetch elec_to_hemi dataframe to store as self.elec2hemi_df
+        """Fetch elec_to_hemi dataframe to store as self.elec2hemi_df.
 
         Returns:
             pd.DataFrame: df with columns 'elec' and 'hemi'
@@ -85,7 +85,7 @@ class Subject:
         return pd.read_csv(fpath)
 
     def _fetch_elec_euc_arr(self):
-        """Fetch elec_euc_arr to store as self.elec_euc_arr
+        """Fetch elec_euc_arr to store as self.elec_euc_arr.
         
         Returns:
             np.array: n_elec x n_elec array of Euclidean distances
@@ -99,7 +99,7 @@ class Subject:
 
     def fetch_sequences(self, cluster=None):
         """Fetch electrode sequences and lag times once they have been saved
-        as .csv files in self.dirs['seqs']
+        as .csv files in self.dirs['seqs'].
 
         Args:
             cluster (int, optional): Cluster of interest. Defaults to None.
@@ -127,17 +127,17 @@ class Subject:
 
     def _fetch_parc_minEuclidean_byElec(self):
         """Fetch array of minimum Euclidean distances between parcels and
-        electrodes
+        electrodes.
 
         Returns:
-            np.Array: array Euclidean distances with shape (n_parcs, n_elecs)
+            np.array: array Euclidean distances with shape (n_parcs, n_elecs)
         """
 
         fpath = self.dirs['sc'] / "parc_minEuclidean_byElec.csv"
         return np.loadtxt(fpath, delimiter=',', dtype=float)
 
     def _fetch_node2parc_df_dict(self):
-        """Fetch node to parcel look-up table for given hemisphere
+        """Fetch node to parcel look-up table for given hemisphere.
 
         Returns:
             dict: dictionary of dataframes with "node" and "parcel" columns for
@@ -160,7 +160,7 @@ class Subject:
         return node2parc_df_dict
 
     def _fetch_elec2parc_df(self):
-        """Fetch elec to parcel look-up table
+        """Fetch elec to parcel look-up table.
 
         Returns:
             pd.DataFrame: dataframe with "elecLabel" and "parcNumber" columns
@@ -169,7 +169,7 @@ class Subject:
         return pd.read_csv((self.dirs['sc'] / "elec_to_parc.csv"))
 
     def _fetch_elec2lobe_df(self):
-        """Fetch elec to lobe look-up table
+        """Fetch elec to lobe look-up table.
 
         Returns:
             pd.DataFrame: dataframe with "elecLabel" and "Lobe" columns
@@ -178,7 +178,7 @@ class Subject:
         return pd.read_csv((self.dirs['sc'] / "elec_to_lobe.csv"))
 
     def _fetch_elec_labels_df(self):
-        """Fetch df of all electrode names for conversion to index
+        """Fetch df of all electrode names for conversion to index.
 
         Returns:
             pd.DataFrame: dataframe with "chanName" as column
@@ -235,7 +235,8 @@ class Subject:
         return df.set_index("parcNumber")
 
     def _fetch_node2rsxn_df_dict(self):
-        """Create dictionary of node to resection lookup tables for each hemisphere
+        """Create dictionary of node to resection lookup tables for each 
+        hemisphere.
 
         Returns:
             dict: dictionary with keys = hemi and values = dataframe
@@ -257,7 +258,7 @@ class Subject:
 
     def fetch_geodesic_travel_times(self):
         """Fetch geodesic travel times based on geodesic velocities and
-        distances from electrodes to nodes on the std.141 mesh
+        distances from electrodes to nodes on the std.141 mesh.
 
         Returns:
             tuple: minGeo_maxSpeed_time, minGeo_minSpeed_time,
@@ -292,7 +293,7 @@ class Subject:
         )
 
     def fetch_wm_travel_times(self):
-        """Fetch white matter min/max BL times
+        """Fetch white matter min/max BL times.
 
         Returns:
             tuple: minBL_time, maxBL_time (np.arrays of shape
@@ -320,7 +321,7 @@ class Subject:
         return minBL_time, maxBL_time
 
     def _update_num_clusters(self):
-        """update self.num_clusters value"""
+        """Update self.num_clusters value."""
 
         # load cluster summary df
         in_file = f"cluster_summary_max{self.seq_len}.csv"
@@ -331,7 +332,7 @@ class Subject:
             self.num_clusters = "Clustering has not been run"
 
     def _update_cluster_types(self):
-        """update self.valid_clusters and self.soz_clusters"""
+        """Update self.valid_clusters and self.soz_clusters."""
 
         # check that clustering is complete
         assert isinstance(self.num_clusters, int)
@@ -371,6 +372,7 @@ class Subject:
             self.soz_clusters = 'Subject not found in ied_soz_clusters.csv'
 
     def _update_cluster_num_sequences(self):
+        """Update self.cluster_nseqs value."""
 
         fpath = self.dirs['seqs'] / f"cluster_summary_max{self.seq_len}.csv"
         df = pd.read_csv(fpath)
@@ -387,7 +389,7 @@ class Subject:
         """Update self.valid_sources_all with a set of every possible source
         for each cluster. Update self.valid_sources_one with a single source
         for each cluster (choosing the one that is closest to the most frequent
-        lead electrode)
+        lead electrode).
 
         Args:
             dist (int, optional): geodesic search distance. Defaults to 45.
@@ -450,7 +452,7 @@ class Subject:
         self.valid_sources_one = valid_sources_one
 
     def _update_engel_class(self):
-        """Update self.engel_class and self.engel_months"""
+        """Update self.engel_class and self.engel_months."""
 
 
         # load hemi df
@@ -491,7 +493,7 @@ class Subject:
         self.engel_months = engel_months
 
     def get_elec_idx(self, elec):
-        """Convert electrode to index
+        """Get index of electrode using self.elec_labels_df.
 
         Args:
             elec (str): electrode name
@@ -504,7 +506,7 @@ class Subject:
 
     def compute_lead_elec_parc2prop_df(self, cluster):
         """Compute a lookup table of parcel to proportion explained for leading
-        electrodes
+        electrodes.
 
         Args:
             cluster (int): cluster number
@@ -543,7 +545,7 @@ class Subject:
         return lead_elec_df
 
     def compute_resected_prop(self, parcels):
-        """Retrieve the resected proportion of a parcel for a given hemisphere
+        """Retrieve the resected proportion of a parcel for a given hemisphere.
 
         Args:
             parcels (list): list of int parcels in range (1,self.parcs+1)
@@ -573,68 +575,19 @@ class Subject:
 
         return resected_props
 
-    def compute_dualspike_delays(self, elecs, source):
-        """Compute the min/max delay between geodesic and white matter
-        travel from a source parcel to a list of spiking electrodes"""
-
-        # get geodesic and wm travel times
-        (minGeo_maxSpeed_time, _, maxGeo_minSpeed_time, _) = self.fetch_geodesic_travel_times()
-        minBL_time, maxBL_time = self.fetch_wm_travel_times()
-
-        # get source hemi and nodes
-        source_hemi = get_parcel_hemi(source, self.parcs)
-        modified_source = source
-        if source_hemi.upper() == "RH":
-            modified_source = source - int(self.parcs // 2)
-        node2parc_df = self.node2parc_df_dict[source_hemi]
-        source_nodes = node2parc_df[node2parc_df['parcel'] == modified_source]['node'].to_numpy(dtype=int)
-
-        elec_minmax_delay_dict = {}
-
-        for elec in elecs:
-            # get electrode attributes
-            elec_hemi = self.elec2hemi_df.loc[self.elec2hemi_df.elec == elec, 'hemi'].iloc[0]
-            elec_parc_idxs = convert_elec_to_parc(self.elec2parc_df, elec)
-            elec_idx = self.get_elec_idx(elec)
-
-            # only use geodesic travel for lead electrode if in source hemisphere
-            if elec_hemi.upper() != source_hemi.upper():
-                elec_minmax_delay_dict[elec] = (np.NaN,np.NaN)
-                continue
-            elif len(elec_parc_idxs) == 0:
-                elec_minmax_delay_dict[elec] = (np.NaN,np.NaN)
-                continue
-
-            # min/max geo travel times from source
-            minGeo_time = minGeo_maxSpeed_time[source_nodes,elec_idx][:,np.newaxis]
-            maxGeo_time = maxGeo_minSpeed_time[source_nodes,elec_idx][:,np.newaxis]
-
-            # compute the minimum and maximum of possible values
-            max_maxGeo = np.nanmax(maxGeo_time)
-            min_minGeo = np.nanmin(minGeo_time)
-
-            # lead min/max WM travel times from source
-            maxWM_time = maxBL_time[source,elec_parc_idxs]
-            minWM_time = minBL_time[source,elec_parc_idxs]
-
-            # compute the minimum and maximum of possible values
-            max_maxWM = np.nanmax(maxWM_time)
-            min_minWM = np.nanmin(minWM_time)
-
-            final_min = np.Inf
-            final_max = np.NINF
-
-            for a,b in product([min_minGeo,max_maxGeo],[min_minWM,max_maxWM]):
-                if abs(a-b) > final_max:
-                    final_max = abs(a-b)
-                if abs(a-b) < final_min:
-                    final_min = abs(a-b)
-
-            elec_minmax_delay_dict[elec] = (final_min, final_max)
-
-        return elec_minmax_delay_dict
-
     def compute_rsxn_source_arr(self, n_cluster, all_sources=False):
+        """Create n_node array with a gray resection zone and green TN/TP
+        regions or red FN/FP parcels.
+
+        Args:
+            n_cluster (int): cluster number
+            all_sources (bool, optional): plot every possible source 
+                (not just the single best source). Defaults to False.
+
+        Returns:
+            tuple: np.array of values for creating niml.dset, str hemisphere
+        """
+
 
         if all_sources:
             sources = self.valid_sources_all[n_cluster]
@@ -671,6 +624,21 @@ class Subject:
 
     def compute_localizing_seq_idxs(self, cluster, source, only_geo=False,
                                     only_wm=False):
+        """Return an array of indices for which a source successfully localizes
+        the sequences of a given cluster.
+
+        Args:
+            cluster (int): cluster number
+            source (int): source parcel
+            only_geo (bool, optional): Use geodesic only localization method.
+                Defaults to False.
+            only_wm (bool, optional): Use white matter only localization 
+                method. Defaults to False.
+
+        Returns:
+            np.array: array of indices for which the sequences localize to a 
+                given source (find the sequences with seqs[seq_indices])
+        """
 
         method = ""
         if only_geo:
@@ -738,6 +706,24 @@ class Subject:
     def compute_weighted_source2elec_dist(self, cluster, source=None,
                                           lead_only=False, use_geo=False,
                                           use_all_seqs=False):
+        """Compute the distance between a cluster and source, using a variety
+        of possible weighted schema.
+
+        Args:
+            cluster (int): cluster number
+            source (int, optional): source parcel (uses valid_source_one if 
+                None). Defaults to None.
+            lead_only (bool, optional): only use weighted distances to lead 
+                electrodes. Defaults to False.
+            use_geo (bool, optional): find weighted geodesic distance, not 
+                Euclidean. Defaults to False.
+            use_all_seqs (bool, optional): use every sequence of the cluster, 
+                not just localizing sequences based on the source parcel using 
+                combination method. Defaults to False.
+
+        Returns:
+            float: weighted distance metric
+        """
 
         if source == None:
             source = list(self.valid_sources_one[cluster])[0]
@@ -790,7 +776,7 @@ class Subject:
         return dist_sum / count_total
     
     def compute_jaro_similarities(self, cluster):
-        """Computes a Jaro-Winkler similarity matrix based on an array of 
+        """Compute a Jaro-Winkler similarity matrix based on an array of 
         electrode sequences. Saves out the matrix for future usage.
         
         Args:
