@@ -775,6 +775,51 @@ class Subject:
 
         return dist_sum / count_total
     
+    def compute_farthest_elec_dists(self, cluster, seq_indices,
+                                    source=None, use_geo=True):
+
+        if source == None:
+            source = list(self.valid_sources_one[cluster])[0]
+        else:
+            assert source in range(self.parcs)
+
+        seqs, _ = self.fetch_sequences(cluster=cluster)
+        
+        if seq_indices.size == 0:
+            return np.array(())
+        else:
+            seqs = seqs[seq_indices]
+
+        if use_geo:
+            temp_minGeo = pd.read_csv((self.dirs['sc'] / "node_minGeo_byElec.csv"),
+                                    header=None)
+            minGeo = temp_minGeo.to_numpy(copy=True)
+
+        max_dists = np.zeros(seqs.shape[0])
+
+        for i in range(seqs.shape[0]):
+            row = seqs[i,:]
+            elecs = [elec for elec in row if elec != "nan"]
+            
+            max_dist = 0
+            for elec in elecs:
+                elec_idx = self.get_elec_idx(elec)
+                if use_geo:
+                    dist = compute_elec2parc_geo(self.node2parc_df_dict,
+                                                 minGeo,
+                                                 elec_idx,
+                                                 source)
+                else:
+                    dist = compute_elec2parc_euc(self.parc_minEuclidean_byElec,
+                                                 elec_idx,
+                                                 source)
+
+                if dist > max_dist: max_dist = dist
+            
+            max_dists[i] = max_dist
+
+        return max_dists
+    
     def compute_jaro_similarities(self, cluster):
         """Compute a Jaro-Winkler similarity matrix based on an array of 
         electrode sequences. Saves out the matrix for future usage.
