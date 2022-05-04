@@ -791,6 +791,21 @@ class Subject:
     
     def compute_farthest_elec_dists(self, cluster, seq_indices,
                                     source=None, use_geo=True):
+        """Return an array of distances to the farthest electrode in each 
+        sequence. Hypothesis is that sequences requiring white matter will have
+        a higher proportion of distant electrodes, especially beyond 45 mm.
+
+        Args:
+            cluster (int): cluster number
+            seq_indices (np.array): array of sequence indices
+            source (int, optional): source parcel number. Defaults to None.
+            use_geo (bool, optional): Use geodesic distance, otherwise 
+                Euclidean is used. Defaults to True.
+
+        Returns:
+            np.array: array of maximum distances from parcel to farthest 
+                electrode
+        """
 
         if source == None:
             source = list(self.valid_sources_one[cluster])[0]
