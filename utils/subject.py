@@ -789,7 +789,7 @@ class Subject:
 
         return dist_sum / count_total
     
-    def compute_farthest_elec_dists(self, cluster, seq_indices,
+    def compute_farthest_elec_dists(self, cluster, seq_indices=None,
                                     source=None, use_geo=True):
         """Return an array of distances to the farthest electrode in each 
         sequence. Hypothesis is that sequences requiring white matter will have
@@ -797,7 +797,7 @@ class Subject:
 
         Args:
             cluster (int): cluster number
-            seq_indices (np.array): array of sequence indices
+            seq_indices (np.array): array of sequence indices. Defaults to None.
             source (int, optional): source parcel number. Defaults to None.
             use_geo (bool, optional): Use geodesic distance, otherwise 
                 Euclidean is used. Defaults to True.
@@ -807,14 +807,16 @@ class Subject:
                 electrode
         """
 
-        if source == None:
+        if source is None:
             source = list(self.valid_sources_one[cluster])[0]
         else:
             assert source in range(self.parcs)
 
         seqs, _ = self.fetch_sequences(cluster=cluster)
         
-        if seq_indices.size == 0:
+        if seq_indices is None:
+            pass
+        elif seq_indices.size == 0:
             return np.array(())
         else:
             seqs = seqs[seq_indices]
@@ -953,3 +955,68 @@ class Subject:
             neighbors_total += len(neighbors)
         
         return intersection_total / neighbors_total
+    
+    def compute_closest_elec_orders(self, cluster, seq_indices=None,
+                                    source=None, use_geo=True):
+        """Return an array filled with the position/order of the closest 
+        electrode to the source for every sequence. Hypothesis is that 
+        sequences requiring white matter will allow for electrodes firing later
+        to be closer.
+
+        Args:
+            cluster (int): cluster number
+            seq_indices (np.array): array of sequence indices. Defaults to None.
+            source (int, optional): source parcel number. Defaults to None.
+            use_geo (bool, optional): Use geodesic distance, otherwise 
+                Euclidean is used. Defaults to True.
+
+        Returns:
+            np.array: array of positions of closest electrodes
+        """
+
+        if source == None:
+            source = list(self.valid_sources_one[cluster])[0]
+        else:
+            assert source in range(self.parcs)
+
+        seqs, _ = self.fetch_sequences(cluster=cluster)
+        
+        if seq_indices is None:
+            pass # use all sequences
+        elif seq_indices.size == 0:
+            return np.array(())
+        else:
+            seqs = seqs[seq_indices]
+
+        if use_geo:
+            temp_minGeo = pd.read_csv((self.dirs['sc'] / "node_minGeo_byElec.csv"),
+                                    header=None)
+            minGeo = temp_minGeo.to_numpy(copy=True)
+
+        closest_elec_positions = np.zeros(seqs.shape[0])
+
+        for i in range(seqs.shape[0]):
+            row = seqs[i,:]
+            elecs = [elec for elec in row if elec != "nan"]
+            
+            min_dist = np.Inf
+            closest_position = -1
+            for j in range(len(elecs)):
+                elec_idx = self.get_elec_idx(elecs[j])
+                if use_geo:
+                    dist = compute_elec2parc_geo(self.node2parc_df_dict,
+                                                 minGeo,
+                                                 elec_idx,
+                                                 source)
+                else:
+                    dist = compute_elec2parc_euc(self.parc_minEuclidean_byElec,
+                                                 elec_idx,
+                                                 source)
+
+                if dist < min_dist: 
+                    min_dist = dist
+                    closest_position = j + 1 # add 1 so that the 1st elec is 1
+                
+            closest_elec_positions[i] = closest_position
+
+        return closest_elec_positions
