@@ -452,4 +452,21 @@ def compute_weighted_similarity_length(similarity_arr, seqs):
     mean_length = compute_mean_seq_length(seqs)
     
     return mean_similarity * mean_length
+
+def retrieve_delays(delays, seq_idxs):
+    """Return array of delay times for sequence indices of interest. Hypothesis
+    is that white matter sequences will have faster lag times than geodesic
+    only.
+
+    Args:
+        delays (np.array): array of lag times 
+            (use: _, delays = s.fetch_sequences(cluster))
+        seq_idxs (np.array): array of sequence indices
+
+    Returns:
+        np.array: array of lag times for indexed sequences
+    """
+    
+    indexed_delays = delays[seq_idxs]
+    return indexed_delays[indexed_delays > 0]
     
