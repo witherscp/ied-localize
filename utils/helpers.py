@@ -5,7 +5,6 @@ import shlex
 import subprocess
 import tempfile
 
-import jaro
 import numpy as np
 import pandas as pd
 
@@ -189,6 +188,20 @@ def get_prediction_accuracy(engel_class,
                             resected_prop,
                             resected_threshold = 0.5,
                             sz_free=['1a']):
+    """Based on the Engel class and proportion of a parcel resected, return
+    the prediction accuracy (TP,TN,FP,FN).
+
+    Args:
+        engel_class (str): Engel class or (no_outcome, deceased, no_resection)
+        resected_prop (float): proportion of parcel resected
+        resected_threshold (float, optional): min proportion of parcel resected
+            to consider as fully resected. Defaults to 0.5.
+        sz_free (list, optional): Engel classes considered as seizure free. 
+            Defaults to ['1a'].
+
+    Returns:
+        str: accuracy (TN, TP, FP, FN)
+    """
     
     if resected_prop >= resected_threshold:
         resected = True
@@ -210,32 +223,35 @@ def get_prediction_accuracy(engel_class,
             return "FP"
         else:
             return "TN"
-        
-def collect_dual_spikes(seqs, delays):
-    
-    elec_timing_dict = {}
-    
-    for i in range(seqs.shape[0]):
-        
-        row = seqs[i,:]
-        elec_counter = Counter(row[row != "nan"])
-        
-        dual_elecs = [elec for elec,count in elec_counter.items() if count == 2] 
-        
-        for elec in dual_elecs:
-            
-            mask = row == elec
-            elec_timing_dict.setdefault(
-                elec,[]
-                ).append(np.diff(delays[i,mask])[0])
-    
-    return elec_timing_dict
 
 def compute_elec2parc_euc(elec2parc_euc_arr, elec_idx, parc):
+    """Return the Euclidean distance between an electrode index and parcel.
+
+    Args:
+        elec2parc_euc_arr (np.array): array of elec2parc Euclidean distances 
+            (use: self.parc_minEuclidean_byElec)
+        elec_idx (int): electrode index (use: self.get_elec_idx(elec))
+        parc (int): parcel number
+
+    Returns:
+        float: Euclidean distance between electrode and parcel
+    """
     
     return elec2parc_euc_arr[parc-1, elec_idx]
 
-def compute_elec2parc_geo(node2parc_df_dict, elec2parc_geo_arr, elec_idx, parc):
+def compute_elec2parc_geo(node2parc_df_dict, elec2node_geo_arr, elec_idx, parc):
+    """Return the geodesic distance between an electrode index and parcel.
+
+    Args:
+        node2parc_df_dict (dict): keys: "LH","RH"; values: node to parcel df
+        elec2node_geo_arr (np.array): array of electrode to node geodesic 
+            distances
+        elec_idx (int): electrode index (use: self.get_elec_idx(elec))
+        parc (int): parcel number
+
+    Returns:
+        float: minimum geodesic distance between electrode and parcel
+    """ 
     
     n_parcs = int(node2parc_df_dict['LH']['parcel'].max() * 2)
     
@@ -250,9 +266,17 @@ def compute_elec2parc_geo(node2parc_df_dict, elec2parc_geo_arr, elec_idx, parc):
     
     parc_nodes = node2parc_df[mask]['node'].to_numpy(dtype=int)
     
-    return np.min(elec2parc_geo_arr[parc_nodes,elec_idx])
+    return np.min(elec2node_geo_arr[parc_nodes,elec_idx])
 
 def num2roman(num):
+    """Convert a number to Roman numeral
+
+    Args:
+        num (int): number
+
+    Returns:
+        str: Roman numeral
+    """
 
     roman = ''
 
@@ -265,6 +289,15 @@ def num2roman(num):
     return roman
 
 def roman2num(num):
+    """Convert a Roman numeral to number.
+
+    Args:
+        num (str): Roman numeral
+
+    Returns:
+        int: number
+    """
+    
     roman_numerals = {'I':1, 'V':5, 'X':10}
     result = 0
     for i,c in enumerate(num):
@@ -275,6 +308,17 @@ def roman2num(num):
     return result
 
 def compute_node2prop_arr(parc2prop_df, node2parc_df_dict, hemi=None):
+    """Return an array of proportions explained by individual nodes for plotting purposes.
+
+    Args:
+        parc2prop_df (pd.DataFrame): parcel to proportion dataframe
+        node2parc_df_dict (dict): dictionary of node to parcel dataframes
+        hemi (str, optional): hemisphere; if set to None, will choose the 
+            hemisphere of maximal proportion. Defaults to None.
+
+    Returns:
+        tuple: np.array of proportions at every node, hemisphere string
+    """
     
     if hemi == None:
         # find hemisphere of maximal parcel

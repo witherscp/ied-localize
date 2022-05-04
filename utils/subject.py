@@ -1,10 +1,10 @@
 """Subject class"""
 
 from glob import glob
-from itertools import product
 from math import isnan
 from warnings import filterwarnings
 
+import jaro
 import numpy as np
 import pandas as pd
 
@@ -16,7 +16,23 @@ filterwarnings(action="ignore", message='All-NaN slice encountered')
 class Subject:
 
     def __init__(self, subj, n_parcs=600, n_networks=17, max_length=10,
-                 dist=45, dual_spike=False, use_weighted=False):
+                 dist=45, use_weighted=False):
+        """Create an instance of Subject for analysis of IED spike data
+
+        Args:
+            subj (str): subject p-number
+            n_parcs (int, optional): Schaefer parcellation number. Defaults to 
+                600.
+            n_networks (int, optional): Schaefer networks number. Defaults to 
+                17.
+            max_length (int, optional): Max length of sequences detected. 
+                Defaults to 10.
+            dist (int, optional): Max geodesic search distance for 
+                localization. Defaults to 45.
+            use_weighted (bool, optional): For narrowing down sources from all 
+                to one, weight all lead electrodes rather than taking the most 
+                frequent. Defaults to False.
+        """
 
         # set values
         self.subj = subj
@@ -29,8 +45,6 @@ class Subject:
         self.dirs = {
             k.lower()[:-4]: (v / self.subj) for k,v in data_directories.items()
         }
-        if dual_spike:
-            self.dirs['ied'] = Path(str(data_directories['IED_DIR']) + "_dualSpike") / self.subj
         self._update_ied_subdirs()
         self._update_mri_subdirs()
 
