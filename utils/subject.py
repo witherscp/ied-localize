@@ -111,12 +111,14 @@ class Subject:
         
         return arr
 
-    def fetch_sequences(self, cluster=None):
+    def fetch_sequences(self, cluster=None, all_elecs=False):
         """Fetch electrode sequences and lag times once they have been saved
         as .csv files in self.dirs['seqs'].
 
         Args:
-            cluster (int, optional): Cluster of interest. Defaults to None.
+            cluster (int, optional): cluster of interest. Defaults to None.
+            all_elecs (bool, optional): include elecs without parcels. Defaults
+                to False
 
         Returns:
             seqs, delays: np.array of electrode names and np.array of delay
@@ -129,15 +131,68 @@ class Subject:
         if isinstance(cluster, int):
             suffix = f"_cluster{cluster}"
 
-        seqs_file = self.dirs['seqs'] / (f"elecSequences_max{self.seq_len}"
-                                         f"{suffix}.csv")
-        seqs = np.loadtxt(seqs_file, dtype=str, delimiter=",")
+        noparc_str = '_withParc'
+        if all_elecs:
+            noparc_str = ''
 
-        delays_file = self.dirs['seqs'] / (f"delaySequences_max{self.seq_len}"
-                                           f"{suffix}.csv")
+        seqs_file = self.dirs['seqs'] / (f"elecSequences{noparc_str}_max"
+                                         f"{self.seq_len}{suffix}.csv")
+        
+        if not seqs_file.exists():
+            # remove all electrodes without parcels from sequences
+            self._remove_noparcel_elecs(cluster) 
+        
+        seqs = np.loadtxt(seqs_file, dtype=str, delimiter=",")
+            
+        delays_file = self.dirs['seqs'] / (f"delaySequences{noparc_str}_max"
+                                           f"{self.seq_len}{suffix}.csv")
         delays = np.loadtxt(delays_file, dtype=float,delimiter=",")
 
         return seqs, delays
+    
+    def _remove_noparcel_elecs(self, cluster):
+        
+        suffix = ''
+        if isinstance(cluster, int):
+            suffix = f"_cluster{cluster}"
+        
+        seqs_file = self.dirs['seqs'] / (f"elecSequences_max{self.seq_len}"
+                                         f"{suffix}.csv")
+        seqs = np.loadtxt(seqs_file, dtype=str, delimiter=",")
+        
+        delays_file = self.dirs['seqs'] / (f"delaySequences_max{self.seq_len}"
+                                           f"{suffix}.csv")
+        delays = np.loadtxt(delays_file, dtype=float,delimiter=",")
+        
+        new_seqs = []
+        new_delays = []
+
+        for i in range(seqs.shape[0]):
+            
+            new_seqs.append([]) # make new list in new_seqs and new_delays
+            new_delays.append([])
+            
+            row = seqs[i,:]
+            elecs = [elec for elec in row if elec != "nan"]
+            for j, elec in enumerate(elecs):
+                parcs = convert_elec_to_parc(self.elec2parc_df, elec)
+                if len(parcs) > 0:
+                    new_seqs[-1].append(elec)
+                    new_delays[-1].append(delays[i,j])
+            
+            new_delays[-1] = [lag - new_delays[-1][0] for lag in new_delays[-1]]
+        
+        # convert new_seqs and new_delays to numpy arrays
+        new_seqs_arr = output_lst_of_lsts(new_seqs, my_dtype=object)
+        new_delays_arr = output_lst_of_lsts(new_delays)
+        
+        out_fpath = self.dirs['seqs'] / ("elecSequences_withParc_max"
+                                         f"{self.seq_len}{suffix}.csv")
+        np.savetxt(out_fpath, X=new_seqs_arr, delimiter=",", fmt="%s")
+        
+        out_fpath = self.dirs['seqs'] / ("delaySequences_withParc_max"
+                                         f"{self.seq_len}{suffix}.csv")
+        np.savetxt(out_fpath, X=new_delays_arr, delimiter=",")
 
     def _fetch_parc_minEuclidean_byElec(self):
         """Fetch array of minimum Euclidean distances between parcels and
@@ -863,7 +918,7 @@ class Subject:
         """
 
 
-        seqs, _ = self.fetch_sequences(cluster)
+        seqs, _ = self.fetch_sequences(cluster, all_elecs=True)
         n_sequences = seqs.shape[0]
         
         jaro_similarities = np.zeros((n_sequences, n_sequences))

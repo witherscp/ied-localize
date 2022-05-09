@@ -1,4 +1,3 @@
-from collections import Counter
 from itertools import combinations
 from os import path, remove
 import shlex
@@ -469,4 +468,27 @@ def retrieve_delays(delays, seq_idxs):
     
     indexed_delays = delays[seq_idxs]
     return indexed_delays[indexed_delays > 0]
+
+def output_lst_of_lsts(lst_of_lsts, my_dtype=float):
+    """Convert list of lists into numpy array.
+
+    Args:
+        lst_of_lsts (list): list of lists
+        my_dtype (_type_, optional): type of output array (typically float or 
+            object). Defaults to float.
+
+    Returns:
+        np.array: final array with np.NaN filled in empty spaces
+    """
+
+    max_length = 1 # initialize max number of sources for any sequence
+    for lst in lst_of_lsts:
+        if len(lst) > max_length:
+            max_length = len(lst)
+
+    out_array = np.full((len(lst_of_lsts),max_length), np.NaN, dtype=my_dtype)
+    for i, lst in enumerate(lst_of_lsts):
+        out_array[i,0:len(lst)] = lst
+
+    return out_array
     
