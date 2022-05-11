@@ -644,7 +644,8 @@ class Subject:
 
         return resected_props
 
-    def compute_rsxn_source_arr(self, n_cluster, all_sources=False):
+    def compute_rsxn_source_arr(self, n_cluster, all_sources=False,
+                                source=None):
         """Create n_node array with a gray resection zone and green TN/TP
         regions or red FN/FP parcels.
 
@@ -657,11 +658,14 @@ class Subject:
             tuple: np.array of values for creating niml.dset, str hemisphere
         """
 
-
-        if all_sources:
-            sources = self.valid_sources_all[n_cluster]
+        if source is None:
+            if all_sources:
+                sources = self.valid_sources_all[n_cluster]
+            else:
+                sources = self.valid_sources_one[n_cluster]
         else:
-            sources = self.valid_sources_one[n_cluster]
+            assert source in range(1,self.parcs+1)
+            sources = [source]
 
         hemi = get_parcel_hemi(list(sources)[0], self.parcs)
 
