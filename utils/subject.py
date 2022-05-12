@@ -16,7 +16,7 @@ filterwarnings(action="ignore", message='All-NaN slice encountered')
 class Subject:
 
     def __init__(self, subj, n_parcs=600, n_networks=17, max_length=10,
-                 dist=45, use_weighted=False, use_best=True):
+                 dist=45, use_weighted=True, use_best=True):
         """Create an instance of Subject for analysis of IED spike data
 
         Args:
@@ -31,7 +31,7 @@ class Subject:
                 localization. Defaults to 45.
             use_weighted (bool, optional): For narrowing down sources from all 
                 to one, weight all lead electrodes rather than taking the most 
-                frequent. Defaults to False.
+                frequent. Defaults to True.
             use_best (bool, optional): For narrowing down sources from all 
                 to one, only compare the parcels tied for highest proportion 
                 explained (don't consider the top 5%). Defaults to True.
@@ -465,7 +465,7 @@ class Subject:
 
         self.cluster_nseqs = cluster_seq_dict
 
-    def _update_source_parcels(self, dist=45, use_weighted=False, 
+    def _update_source_parcels(self, dist=45, use_weighted=True, 
                                use_best=True):
         """Update self.valid_sources_all with a set of every possible source
         for each cluster. Update self.valid_sources_one with a single source
@@ -476,7 +476,7 @@ class Subject:
             dist (int, optional): geodesic search distance. Defaults to 45.
             use_weighted (bool, optional): For narrowing down sources from all 
                 to one, weight all lead electrodes rather than taking the most 
-                frequent. Defaults to False.
+                frequent. Defaults to True.
             use_best (bool, optional): For narrowing down sources from all 
                 to one, only compare the parcels tied for highest proportion 
                 explained (don't consider the top 5%). Defaults to True.
