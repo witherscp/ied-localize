@@ -16,7 +16,7 @@ filterwarnings(action="ignore", message='All-NaN slice encountered')
 class Subject:
 
     def __init__(self, subj, n_parcs=600, n_networks=17, max_length=10,
-                 dist=45, use_weighted=False):
+                 dist=45, use_weighted=False, use_best=True):
         """Create an instance of Subject for analysis of IED spike data
 
         Args:
@@ -32,6 +32,9 @@ class Subject:
             use_weighted (bool, optional): For narrowing down sources from all 
                 to one, weight all lead electrodes rather than taking the most 
                 frequent. Defaults to False.
+            use_best (bool, optional): For narrowing down sources from all 
+                to one, only compare the parcels tied for highest proportion 
+                explained (don't consider the top 5%). Defaults to True.
         """
 
         # set values
@@ -61,7 +64,9 @@ class Subject:
         self._update_num_clusters()
         self._update_cluster_num_sequences()
         self._update_cluster_types()
-        self._update_source_parcels(dist=dist, use_weighted=use_weighted)
+        self._update_source_parcels(dist=dist, 
+                                    use_weighted=use_weighted,
+                                    use_best=use_best)
         self._update_engel_class()
 
         if self.engel_class not in ("no_resection","no_outcome","deceased"):
@@ -151,6 +156,12 @@ class Subject:
         return seqs, delays
     
     def _remove_noparcel_elecs(self, cluster):
+        """Save sequences without elecs that have no parcels because they were 
+        not used for source localization and should be ignored for analysis.
+
+        Args:
+            cluster (int): cluster number
+        """
         
         suffix = ''
         if isinstance(cluster, int):
@@ -454,16 +465,22 @@ class Subject:
 
         self.cluster_nseqs = cluster_seq_dict
 
-    def _update_source_parcels(self, dist=45, use_weighted=False):
+    def _update_source_parcels(self, dist=45, use_weighted=False, 
+                               use_best=True):
         """Update self.valid_sources_all with a set of every possible source
         for each cluster. Update self.valid_sources_one with a single source
         for each cluster (choosing the one that is closest to the most frequent
-        lead electrode).
+        lead electrode or has highest proportion explained).
 
         Args:
             dist (int, optional): geodesic search distance. Defaults to 45.
+            use_weighted (bool, optional): For narrowing down sources from all 
+                to one, weight all lead electrodes rather than taking the most 
+                frequent. Defaults to False.
+            use_best (bool, optional): For narrowing down sources from all 
+                to one, only compare the parcels tied for highest proportion 
+                explained (don't consider the top 5%). Defaults to True.
         """
-
 
         valid_sources_all, valid_sources_one = {}, {}
 
@@ -489,9 +506,20 @@ class Subject:
             # leading electrode
             if len(valid_sources_all[cluster]) > 1:
 
+                if use_best:
+                    # only compare sources with max proportion explained
+                    sources_to_compare = set(
+                        parc2prop_df.loc[
+                            parc2prop_df.propExplanatorySpikes == parc2prop_df.max().iloc[0]
+                        ].index
+                    )
+                else:
+                    # compare sources in top 5%
+                    sources_to_compare = valid_sources_all[cluster]
+
                 if use_weighted:
                     min_dist = np.Inf
-                    for source in valid_sources_all[cluster]:
+                    for source in sources_to_compare:
                         d = self.compute_weighted_source2elec_dist(cluster,
                                                                    source=source,
                                                                    lead_only=True,
@@ -510,8 +538,10 @@ class Subject:
                     lead_idx = self.get_elec_idx(lead)
 
                     # find closest parcel to lead_idx
-                    top_parc_idxs = [parc - 1 for parc in valid_sources_all[cluster]]
-                    min_loc = np.argmin(self.parc_minEuclidean_byElec[top_parc_idxs, lead_idx])
+                    top_parc_idxs = [parc - 1 for parc in sources_to_compare]
+                    min_loc = np.argmin(
+                        self.parc_minEuclidean_byElec[top_parc_idxs, lead_idx]
+                    )
                     valid_sources_one[cluster] = set([top_parc_idxs[min_loc] + 1])
 
             else:
@@ -522,7 +552,6 @@ class Subject:
 
     def _update_engel_class(self):
         """Update self.engel_class and self.engel_months."""
-
 
         # load hemi df
         engel_fpath = data_directories['IED_ANALYSIS_DIR'] / "ied_subj_engelscores.csv"
@@ -920,7 +949,6 @@ class Subject:
         Returns:
             np.array: n_seq x n_seq similarity matrix
         """
-
 
         seqs, _ = self.fetch_sequences(cluster, all_elecs=True)
         n_sequences = seqs.shape[0]
