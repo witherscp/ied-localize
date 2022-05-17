@@ -1,6 +1,5 @@
+from os import mkdir
 import warnings
-
-from ied_repo.utils.helpers import *
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 from nilearn import plotting
@@ -10,6 +9,7 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator
 import seaborn as sns
 
+from ied_repo.utils.helpers import *
 from ied_repo.utils.subject import Subject
 
 rc('font', family='TimesNewRoman')
@@ -209,3 +209,39 @@ def barplot_annotate_brackets(num1, num2, data, center, height, yerr=None,
         kwargs['fontsize'] = fs
 
     plt.text(*mid, text, **kwargs)
+    
+def create_electrode_node_arr(Subj, elecs=[], lags=[]):
+    
+    if len(elecs) > 0:
+        is_sequence = True
+    else:
+        is_sequence = False
+    
+    rai_coords_file = Subj.dirs['align_elec_alt'] / "electrodes.COORDS.ALT.RAI.1D"
+    all_rai_coords = np.loadtxt(rai_coords_file)[:,:-1]
+
+    if is_sequence:
+        elec_idxs = np.array([Subj.get_elec_idx(elec) for elec in elecs])
+        rai_coords = all_rai_coords[elec_idxs,:]
+    else:
+        # get all electrodes in gray matter
+        gm_elec_file = Subj.dirs['align_elec_alt'] / "electrodes.LABELS.GM.1D"
+        gm_elec_nums = np.loadtxt(gm_elec_file, usecols=1, dtype=int)[1:] - 1
+        rai_coords = all_rai_coords[gm_elec_nums]
+    
+    # reorient to LPI orientation
+    lpi_coords = reorient_coord(rai_coords, 'RAI', 'LPI')
+
+    # fill intensity and radius parameters to new columns
+    if is_sequence:
+        intensity = np.array(lags)[:,np.newaxis] + 1
+        radii = np.ones((len(elecs),1))
+        radii[0] = 1.5 # lead electrode is enlarged
+        new_cols = np.hstack((intensity, radii))
+    else:
+        new_cols = np.tile(np.array([1,0.5]), (lpi_coords.shape[0], 1))
+    
+    # concatenate to electrode coordinates
+    node_arr = np.concatenate([lpi_coords, new_cols], axis=1)
+
+    return node_arr
