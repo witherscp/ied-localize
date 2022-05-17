@@ -1,4 +1,4 @@
-from itertools import combinations
+from itertools import combinations, repeat
 from os import path, remove
 import shlex
 import subprocess
@@ -499,4 +499,40 @@ def output_lst_of_lsts(lst_of_lsts, my_dtype=float):
         out_array[i,0:len(lst)] = lst
 
     return out_array
+
+def reorient_coord(coord_arr, in_orient, out_orient):
+    """
+    Change the orientation of a set of XYZ coordinates
+
+    Args:
+        coord_arr (np.array): XYZ coordinate array of shape (n_coords,3) with 
+            columns corresponding to X, Y and Z axes
+        in_orient (str): 3-letter code indicating orientation of input 
+            coordinates
+        out_orient (str): 3-letter code indicating desired orientation of 
+            output coordinates
+
+    Returns:
+        np.array: XYZ coordinate array (same shape as coord_arr) with new 
+        orientation specified in "out_orient"
+    """
+    # define axis codes
+    axis_codes_dict = {
+        0: ['L','R'],
+        1: ['A','P'],
+        2: ['I','S']
+    }
+
+    change_axis_dict = dict(zip(range(3), repeat(True)))
+    for idx in range(3):
+        for code in axis_codes_dict[idx]:
+            if code in in_orient.upper() and code in out_orient.upper():
+                change_axis_dict[idx] = False
+                break
+
+    # change axes that need to be changed
+    for axis, change_bool in change_axis_dict.items():
+        if change_bool: coord_arr[:,axis] = -coord_arr[:,axis]
+
+    return coord_arr
     
