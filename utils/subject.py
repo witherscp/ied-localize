@@ -89,7 +89,8 @@ class Subject:
 
         for val, dir in [('surf', 'surf/xhemi/std141/orig'),
                          ('general', 'surf/xhemi/std141/orig/general'),
-                         ('align_elec_alt', f'icEEG/align_elec_alt')]:
+                         ('align_elec_alt', 'icEEG/align_elec_alt'),
+                         ('docs', 'icEEG/__docs')]:
 
             self.dirs[val] = self.dirs['mri'] / dir
 
