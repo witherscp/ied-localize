@@ -1,4 +1,3 @@
-from os import mkdir
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
 
@@ -210,7 +209,23 @@ def barplot_annotate_brackets(num1, num2, data, center, height, yerr=None,
 
     plt.text(*mid, text, **kwargs)
     
-def create_electrode_node_arr(Subj, elecs=[], lags=[]):
+def get_electrode_node_arr(Subj, elecs=[], lags=[], 
+                           func=(lambda x: ((100 - x)/100 * 2))):
+    """Create array that can be saved out as .node file.
+
+    Args:
+        Subj (Subject instance): an instance of Subject
+        elecs (list, optional): electrodes to plot. Defaults to [].
+        lags (list, optional): lag times to influence size and color of 
+            electrodes. Defaults to [].
+        func (func, optional): function to convert lag time to radius. 
+            Defaults to (lambda x: ((100 - x)/100 * 2)).
+
+    Returns:
+        np.array: array with shape (n_elecs, 5); first 3 columns are x,y,z 
+            coordinates; last 2 columns are color intensity and radius, 
+            respectively
+    """
     
     if len(elecs) > 0:
         is_sequence = True
@@ -235,8 +250,12 @@ def create_electrode_node_arr(Subj, elecs=[], lags=[]):
     # fill intensity and radius parameters to new columns
     if is_sequence:
         intensity = np.array(lags)[:,np.newaxis] + 1
-        radii = np.ones((len(elecs),1))
-        radii[0] = 1.5 # lead electrode is enlarged
+        
+        # convert radii using provided function; default is range 0 to 2
+        # normalized based on lag time
+        radii_lst = [func(lag) for lag in lags]
+        radii = np.array(radii_lst)[:,np.newaxis]
+        
         new_cols = np.hstack((intensity, radii))
     else:
         new_cols = np.tile(np.array([1,0.5]), (lpi_coords.shape[0], 1))
