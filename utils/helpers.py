@@ -1,8 +1,4 @@
 from itertools import combinations, repeat
-from os import path, remove
-import shlex
-import subprocess
-import tempfile
 
 import numpy as np
 import pandas as pd
@@ -55,45 +51,6 @@ def get_frequent_seqs(seqs, n_members=3, n_top=1, ordered=True):
     top_seqs = {k:seq_groups_dict[k] for k in descending_keys[:n_top]}
     
     return top_seqs
-
-def array_to_niml(array, odir, fname):
-    """Create a niml.dset file at {odir / fname} using array of shape 
-    (n_nodes,1)
-
-    Args:
-        array (np.array): values at each node; must have size n_nodes
-        odir (pathlib.PosixPath): out directory
-        fname (str): fname (excluding niml.dset)
-    """
-    
-    # array must contain the same number of values as std.141 mesh
-    assert np.size(array) == 198812
-    
-    # ensure that array is a column vector
-    if array.ndim == 1:
-        array = array[:,np.newaxis]
-    
-    full_path = odir / f"{fname}.niml.dset"
-    
-    # if file exists already, overwrite with updated version
-    if path.exists(full_path):
-        remove(full_path)
-    
-    # if directory does not exist, make directory and all parents
-    odir.mkdir(parents=True, exist_ok=True)
-    
-    # set-up temporary directory
-    with tempfile.TemporaryDirectory() as tempdir:
-        # save out_1D file
-        temp_file = path.join(tempdir, f"temp.1D")
-        np.savetxt(temp_file, X=array, fmt='%f')
-
-        # run AFNI ConvertDset command to create niml.dset file
-        convert_cmd = shlex.split(f'ConvertDset -o_niml -input {temp_file} '
-                                  f'-add_node_index -prefix {full_path}')
-        # subprocess.run(convert_cmd, stdout=subprocess.DEVNULL, 
-        #                stderr=subprocess.STDOUT)
-        subprocess.run(convert_cmd)
         
 def compute_top_lead_elec(seqs):
     """Given an array of electrode sequences, return the most frequent lead 

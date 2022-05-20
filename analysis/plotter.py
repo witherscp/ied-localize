@@ -1,3 +1,7 @@
+from os import path
+import shlex
+import subprocess
+import tempfile
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
 
@@ -264,3 +268,116 @@ def get_electrode_node_arr(Subj, elecs=[], lags=[],
     node_arr = np.concatenate([lpi_coords, new_cols], axis=1)
 
     return node_arr
+
+def array_to_niml(array, odir, fname):
+    """Create a niml.dset file at {odir / fname} using array of shape 
+    (n_nodes,1)
+
+    Args:
+        array (np.array): values at each node; must have size n_nodes
+        odir (pathlib.PosixPath): out directory
+        fname (str): fname (excluding niml.dset)
+    """
+    
+    # array must contain the same number of values as std.141 mesh
+    assert np.size(array) == 198812
+    
+    # ensure that array is a column vector
+    if array.ndim == 1:
+        array = array[:,np.newaxis]
+    
+    full_path = odir / f"{fname}.niml.dset"
+    
+    # if file exists already, overwrite with updated version
+    full_path.unlink(missing_ok=True)
+    
+    # if directory does not exist, make directory and all parents
+    odir.mkdir(parents=True, exist_ok=True)
+    
+    # set-up temporary directory
+    with tempfile.TemporaryDirectory() as tempdir:
+        # save out_1D file
+        temp_file = path.join(tempdir, f"temp.1D")
+        np.savetxt(temp_file, X=array, fmt='%f')
+
+        # run AFNI ConvertDset command to create niml.dset file
+        convert_cmd = shlex.split(f'ConvertDset -o_niml -input {temp_file} '
+                                  f'-add_node_index -prefix {full_path}')
+        subprocess.run(convert_cmd)
+
+def create_topo_arr(Subj, hemi):
+    """Create an array of nodes for all triangle vertices in std.141.mesh of
+    specified hemisphere.
+
+    Args:
+        Subj (Subject): instance of Subject class
+        hemi (str): hemisphere of interest
+
+    Returns:
+        np.array: array of shape (n_nodes, 3) where each row represents one 
+            triangle and each column represents a node at one vertex.
+    """
+    
+    surf_path = Subj.dirs['surf'] / f"std.141.{hemi.lower()}.pial.gii"
+
+    # get names of out files
+    coord_path = Subj.dirs['surf'] / "pial.1D.coord"
+    topo_path  = Subj.dirs['surf'] / "pial.1D.topo"
+
+    # run AFNI ConvertSurface to get topography
+    shell_cmd = shlex.split(f"ConvertSurface -i_gii {surf_path} -o_vec "
+                            f"{coord_path} {topo_path}")
+    subprocess.run(shell_cmd, stdout=subprocess.DEVNULL)
+
+    coord_path.unlink() # delete coordinates file that is unused
+    topo_arr = np.loadtxt(topo_path, delimiter=' ', dtype=int)
+    
+    return topo_arr
+
+def get_border_nodes(Subj, parcel):
+    """Create (n_nodes,1) array with value 1 for every node on the border of 
+    given parcel.
+
+    Args:
+        Subj (Subject): instance of Subject class
+        parcel (int): parcel number in range (1,n_parcs+1)
+
+    Returns:
+        np.array: array with 1's for every node on border of parcel, 
+            shape (n_nodes,1). Use array_to_niml() to convert to niml.dset
+    """
+    
+    
+    hemi = get_parcel_hemi(parcel, Subj.parcs)
+    topo_path = Subj.dirs['surf'] / "pial.1D.topo"
+    
+    if not topo_path.exists():
+        topo_node_arr = create_topo_arr(Subj, hemi)
+    else:
+        topo_node_arr = np.loadtxt(topo_path, delimiter=' ', dtype=int)
+    
+    # convert nodes to parcels
+    node2parc_dict = Subj.node2parc_df_dict[hemi].set_index("node").to_dict()['parcel']
+    topo_parc_arr = np.vectorize(node2parc_dict.get)(topo_node_arr)
+    
+    # get all triangles that have at least 2 unique parcels
+    border_idx = ~np.logical_and(
+        topo_parc_arr[:,0] == topo_parc_arr[:,1], 
+        topo_parc_arr[:,0] == topo_parc_arr[:,2]
+    )
+    
+    # get rows of topo_arrs that are on the border
+    border_topo_parc_arr = topo_parc_arr[border_idx,:]
+    border_topo_node_arr = topo_node_arr[border_idx,:]
+    
+    # constrain parcel to range [1,n_parcs/2]
+    if parcel > (Subj.parcs // 2):
+        parcel -= (Subj.parcs // 2)
+    
+    # retrieve all nodes of given parcel in border rows
+    nodes = np.unique(border_topo_node_arr[np.isin(border_topo_parc_arr,parcel)])
+    
+    nodes_arr = np.zeros(198812)
+    nodes_arr[nodes] = 1
+    
+    return nodes_arr
