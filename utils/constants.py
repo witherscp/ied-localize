@@ -29,6 +29,9 @@ MIN_WM_VEL = 1.2
 MAX_GEO_VEL = 0.45
 MIN_GEO_VEL = 0.25
 
+# number of nodes on std.141 mesh
+N_NODES = 198812
+
 # Roman numeral conversion list
 NUM_MAP = [(10, 'X'), 
            (9, 'IX'), 

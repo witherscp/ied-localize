@@ -3,7 +3,8 @@ from itertools import combinations, repeat
 import numpy as np
 import pandas as pd
 
-from .constants import NUM_MAP
+from .constants import (NUM_MAP, MAX_GEO_VEL, MIN_GEO_VEL, 
+                        MAX_WM_VEL, MIN_WM_VEL)
 
 def get_frequent_seqs(seqs, n_members=3, n_top=1, ordered=True):
     """Retrieves the {n_top} number of most frequent {n_member} sequences 
@@ -65,6 +66,15 @@ def compute_top_lead_elec(seqs):
     
     elecs, counts = np.unique(seqs[:,0], return_counts=True)
     return elecs[np.argmax(counts)]
+
+def convert_parcs(parc_str):
+    
+    lst_str = parc_str.strip('][').split(', ')
+    return map_func(lst_str, no_index=False)
+
+def convert_lobes(lobe_str):
+    
+    return lobe_str.replace("'",'').replace(' ','').strip('[]').split(',')
 
 def convert_elec_to_parc(elec2parc_df, elec, no_index=False):
     """Get a list of parcels (or parcel indices) associated with a given 
@@ -492,4 +502,38 @@ def reorient_coord(coord_arr, in_orient, out_orient):
         if change_bool: coord_arr[:,axis] = -coord_arr[:,axis]
 
     return coord_arr
+
+def constrain_velocities(min_arr, max_arr, is_geo=False, is_wm=False):
     
+    assert is_geo or is_wm
+    
+    if is_geo:
+        min_arr = np.maximum(min_arr, MIN_GEO_VEL)
+        max_arr = np.minimum(max_arr, MAX_GEO_VEL)
+    else:
+        min_arr = np.maximum(min_arr, MIN_WM_VEL)
+        max_arr = np.minimum(max_arr, MAX_WM_VEL)
+    
+    return min_arr, max_arr
+
+def convert_list_to_dict(lst):
+
+    out_dict = {}
+
+    for parcel_list in lst:
+        for parcel in parcel_list:
+            out_dict.setdefault(parcel,0)
+            out_dict[parcel] += 1
+
+    return out_dict
+
+def output_normalized_counts(num_counts, hemi_dict, n_parcs):
+
+    normalized_lst = [(count / num_counts) for count in hemi_dict.values()]
+    output_df = pd.DataFrame({"parcNumber":hemi_dict.keys(),
+                              "propExplanatorySpikes":normalized_lst})
+    output_df.set_index("parcNumber", inplace=True)
+    output_df.sort_index(inplace=True)
+    output_df = output_df.reindex(list(range(1,n_parcs+1)),fill_value=0)
+
+    return output_df

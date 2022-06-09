@@ -16,7 +16,7 @@ filterwarnings(action="ignore", message='All-NaN slice encountered')
 class Subject:
 
     def __init__(self, subj, n_parcs=600, n_networks=17, max_length=10,
-                 dist=45, use_weighted=True, use_best=True):
+                 dist=45, use_weighted=True, use_best=True, in_progress=False):
         """Create an instance of Subject for analysis of IED spike data
 
         Args:
@@ -52,25 +52,30 @@ class Subject:
         self._update_mri_subdirs()
 
         # get arrays and dataframes that are constant
-        self.elec_labels_df = self._fetch_elec_labels_df()
-        self.elec2parc_df = self._fetch_elec2parc_df()
-        self.elec2lobe_df = self._fetch_elec2lobe_df()
+        self.elec2index_dict = self._fetch_elec2index_dict()
+        self.elec2parc_dict = self._fetch_elec2parc_dict()
+        self.elec2lobe_dict = self._fetch_elec2lobe_dict()
+        self.elec2hemi_dict = self._fetch_elec2hemi_dict()
+        self.parc2node_dict = self._fetch_parc2node_dict()
+        self.node2parc_hemi_dict = self._fetch_node2parc_hemi_dict()
+        
         self.parc_minEuclidean_byElec = self._fetch_parc_minEuclidean_byElec()
-        self.node2parc_df_dict = self._fetch_node2parc_df_dict()
-        self.elec2hemi_df = self._fetch_elec2hemi_df()
         self.elec_euc_arr = self._fetch_elec_euc_arr()
 
         # update attributes
-        self._update_num_clusters()
-        self._update_cluster_num_sequences()
-        self._update_cluster_types()
-        self._update_source_parcels(dist=dist, 
-                                    use_weighted=use_weighted,
-                                    use_best=use_best)
         self._update_engel_class()
-
         if self.engel_class not in ("no_resection","no_outcome","deceased"):
             self.node2rsxn_df_dict = self._fetch_node2rsxn_df_dict()
+        self._update_num_clusters()
+        self._update_cluster_num_sequences()
+        self._update_cluster_hemispheres()
+
+        # if localized, update additional attributes
+        if not in_progress:
+            self._update_cluster_types()
+            self._update_source_parcels(dist=dist, 
+                                        use_weighted=use_weighted,
+                                        use_best=use_best)
 
     def _update_ied_subdirs(self):
         """Add IED subdirectories."""
@@ -93,16 +98,6 @@ class Subject:
                          ('docs', 'icEEG/__docs')]:
 
             self.dirs[val] = self.dirs['mri'] / dir
-
-    def _fetch_elec2hemi_df(self):
-        """Fetch elec_to_hemi dataframe to store as self.elec2hemi_df.
-
-        Returns:
-            pd.DataFrame: df with columns 'elec' and 'hemi'
-        """
-
-        fpath = self.dirs['sc'] / "elec_to_hemi.csv"
-        return pd.read_csv(fpath)
 
     def _fetch_elec_euc_arr(self):
         """Fetch elec_euc_arr to store as self.elec_euc_arr.
@@ -217,57 +212,108 @@ class Subject:
         fpath = self.dirs['sc'] / "parc_minEuclidean_byElec.csv"
         return np.loadtxt(fpath, delimiter=',', dtype=float)
 
-    def _fetch_node2parc_df_dict(self):
-        """Fetch node to parcel look-up table for given hemisphere.
+    def _fetch_parc2node_dict(self):
+        """Fetch parcel to node dictionary.
 
         Returns:
-            dict: dictionary of dataframes with "node" and "parcel" columns for
-                each hemisphere
+            dict: keys = parcel number, values = array of nodes
         """
 
-        node2parc_df_dict = {}
+        parc2node_dict = {}
 
-        for hemi, use_idx in [("LH", 1),
-                              ("RH", 2)]:
+        for hemi, use_idx in [("LH", 1), ("RH", 2)]:
 
-            # load node2parc df
-            node2parc_path = self.dirs['sc'] / "node_to_parc.csv"
-            node2parc_df = pd.read_csv(node2parc_path, usecols=[0,use_idx],
-                                       names=['node', 'parcel'], skiprows=1)
+            fpath = self.dirs['sc'] / "node_to_parc.csv"
+            df = pd.read_csv(fpath, 
+                             usecols=[0,use_idx], 
+                             names=['node', 'parcel'],
+                             skiprows=1, 
+                             dtype=int)
+            
+            modifier = 0
+            if hemi == "RH": modifier = self.parcs // 2
+            
+            for parc in range(1,(self.parcs // 2) + 1):
+                node_arr = df.loc[df.parcel == parc, 'node'].to_numpy()
+                parc2node_dict[parc + modifier] = node_arr
 
-            # add to dict
-            node2parc_df_dict[hemi] = node2parc_df
-
-        return node2parc_df_dict
-
-    def _fetch_elec2parc_df(self):
-        """Fetch elec to parcel look-up table.
+        return parc2node_dict
+    
+    def _fetch_node2parc_hemi_dict(self):
+        """Fetch node to parcel hemi dict.
 
         Returns:
-            pd.DataFrame: dataframe with "elecLabel" and "parcNumber" columns
+            dict: keys = hemi, values = node2parc_dict;
+                  node2parc_dict: keys = node, values = parcel
         """
 
-        return pd.read_csv((self.dirs['sc'] / "elec_to_parc.csv"))
+        node2parc_hemi_dict = {}
 
-    def _fetch_elec2lobe_df(self):
-        """Fetch elec to lobe look-up table.
+        for hemi, use_idx in [("LH", 1), ("RH", 2)]:
+
+            fpath = self.dirs['sc'] / "node_to_parc.csv"
+            df = pd.read_csv(fpath, 
+                             usecols=[0,use_idx], 
+                             names=['node', 'parcel'],
+                             skiprows=1, 
+                             dtype=int)
+            
+            modifier = 0
+            if hemi == "RH": modifier = self.parcs // 2
+            
+            df_dict = df.set_index('node').to_dict()['parcel']
+            node2parc_dict = {node:(parc+modifier if parc != 0 else parc) for node,parc in df_dict.items()}
+
+            node2parc_hemi_dict[hemi] = node2parc_dict
+        
+        return node2parc_hemi_dict
+
+    def _fetch_elec2hemi_dict(self):
+        """Fetch elec to hemi dictionary.
 
         Returns:
-            pd.DataFrame: dataframe with "elecLabel" and "Lobe" columns
+            dict: keys = elec, values = hemi
         """
 
-        return pd.read_csv((self.dirs['sc'] / "elec_to_lobe.csv"))
+        fpath = self.dirs['sc'] / "elec_to_hemi.csv"
+        df = pd.read_csv(fpath)
+        df.hemi = df.hemi.str.upper()
+        return df.set_index('elec').to_dict()['hemi']
 
-    def _fetch_elec_labels_df(self):
-        """Fetch df of all electrode names for conversion to index.
+    def _fetch_elec2parc_dict(self):
+        """Fetch elec to parcel dictionary.
 
         Returns:
-            pd.DataFrame: dataframe with "chanName" as column
+            dict: keys = elec, values = hemi
+        """
+        df = pd.read_csv((self.dirs['sc'] / "elec_to_parc.csv"))
+        df_dict = df.set_index('elecLabel').to_dict()['parcNumber']
+        return {elec:convert_parcs(parcs) for elec,parcs in df_dict.items()}
+ 
+    def _fetch_elec2lobe_dict(self):
+        """Fetch elec to lobe dictionary.
+
+        Returns:
+            dict: keys = elec, values = lobe
+        """
+
+        fpath = (self.dirs['sc'] / "elec_to_lobe.csv")
+        df = pd.read_csv(fpath)
+        df_dict = df.set_index('elecLabel').to_dict()['Lobe']
+        return {elec:convert_lobes(lobes) for elec,lobes in df_dict.items()}
+
+    def _fetch_elec2index_dict(self):
+        """Fetch elec to index dictionary.
+
+        Returns:
+            dict: keys = elec, values = index
         """
 
         # load order of electrodes
         fpath = self.dirs['sc'] / "elec_labels.csv"
-        return pd.read_csv(fpath, header=None, names=["chanName"])
+        df = pd.read_csv(fpath, header=None, names=["chanName"])
+        df['index'] = df.index
+        return df.set_index('chanName').to_dict()['index']
 
     def fetch_normalized_parc2prop_df(self, cluster, dist=45,
                                       only_geo=False, only_wm=False):
@@ -465,6 +511,19 @@ class Subject:
             cluster_seq_dict[cluster] = n_seqs
 
         self.cluster_nseqs = cluster_seq_dict
+
+    def _update_cluster_hemispheres(self):
+        """Update self.cluster_hemis value"""
+        
+        fpath = self.dirs['seqs'] / f"cluster_summary_max{self.seq_len}.csv"
+        df = pd.read_csv(fpath)
+
+        cluster_hemi_dict = {}
+        for cluster in range(1,self.num_clusters+1):
+            hemi = df.loc[df['Cluster Number'] == cluster, 'Hemi'].iloc[0]
+            cluster_hemi_dict[cluster] = hemi
+
+        self.cluster_hemis = cluster_hemi_dict
 
     def _update_source_parcels(self, dist=45, use_weighted=True, 
                                use_best=True):
@@ -1178,3 +1237,37 @@ class Subject:
             all_dists = np.hstack((all_dists,seq_dists))
 
         return all_dists
+    
+    def fetch_minmax_distances(self):
+    
+        # load min/max WM bundle lengths
+
+        BL = np.loadtxt((self.dirs['sc'] / 'BL.csv'), 
+                        delimiter=",", dtype=float)
+        sBL = np.loadtxt((self.dirs['sc'] / 'sBL.csv'), 
+                         delimiter=",", dtype=float)
+
+        BL[BL == 0] = np.NaN
+        sBL[sBL == 0] = np.NaN
+
+        maxBL = BL + sBL
+        minBL = BL - sBL
+        minBL[minBL < 0] = 0
+        minBL[np.diag_indices_from(minBL)] = 0
+        maxBL[np.diag_indices_from(maxBL)] = 10
+
+        # load min/max geodesic distances
+        temp_minGeo = pd.read_csv((self.dirs['sc'] / "node_minGeo_byElec.csv"), 
+                                header=None)
+        temp_maxGeo = pd.read_csv((self.dirs['sc'] / "node_maxGeo_byElec.csv"), 
+                                header=None)
+        minGeo = temp_minGeo.to_numpy(copy=True)
+        maxGeo = temp_maxGeo.to_numpy(copy=True)
+
+        # set all minimum values > dist to np.NaN and all max values to dist 
+        # that have a min value less than dist
+        minGeo[minGeo > self.dist] = np.NaN
+        maxGeo[np.isnan(minGeo)] = np.NaN
+        maxGeo[maxGeo > self.dist] = self.dist
+        
+        return minBL, maxBL, minGeo, maxGeo
