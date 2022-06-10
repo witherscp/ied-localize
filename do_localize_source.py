@@ -54,6 +54,8 @@ if __name__ == "__main__":
 
   minBL, maxBL, minGeo, maxGeo = s.fetch_minmax_distances()
   maxBL[np.diag_indices_from(maxBL)] = 10
+  
+  parc_minGeo, parc_maxGeo = convert_geo_arrays(s, minGeo, maxGeo)
 
   # iterate through clusters
   for cluster in range(1,s.num_clusters+1):
@@ -87,15 +89,15 @@ if __name__ == "__main__":
             
             # check both hemispheres for sources
             for c_hemi in ("LH","RH"):
-              c_sources = lead_geodesic(s, elec_idxs, parc_idxs, lags, hemis,
-                                        c_hemi, minGeo, maxGeo, minBL, maxBL, 
-                                        only_geo=only_geo, only_wm=only_wm)
-              seq_sources = seq_sources + c_sources
+              geo_sources = lead_geodesic(s, elec_idxs, parc_idxs, lags, hemis,
+                                          c_hemi, minGeo, maxGeo, minBL, maxBL, 
+                                          only_geo=only_geo, only_wm=only_wm)
+              seq_sources = seq_sources + geo_sources
               
-              c_sources = lead_wm(s, elec_idxs, parc_idxs, lags, hemis, c_hemi, 
-                                  minGeo, maxGeo, minBL, maxBL, 
-                                  only_geo=only_geo, only_wm=only_wm)
-              seq_sources = seq_sources + c_sources
+            wm_sources = lead_wm(elec_idxs, parc_idxs, lags, parc_minGeo, 
+                                parc_maxGeo, minBL, maxBL, only_geo=only_geo, 
+                                only_wm=only_wm)
+            seq_sources = seq_sources + wm_sources
             
           else:
             
@@ -104,9 +106,9 @@ if __name__ == "__main__":
                                         maxBL, only_geo=only_geo,
                                         only_wm=only_wm)
             
-            wm_sources = lead_wm(s, elec_idxs, parc_idxs, lags, hemis, 
-                                cluster_hemi, minGeo, maxGeo, minBL, 
-                                maxBL, only_geo=only_geo, only_wm=only_wm)
+            wm_sources = lead_wm(elec_idxs, parc_idxs, lags, parc_minGeo, 
+                                 parc_maxGeo, minBL, maxBL, only_geo=only_geo, 
+                                 only_wm=only_wm)
             
             seq_sources = geo_sources + wm_sources
           

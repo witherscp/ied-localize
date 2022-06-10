@@ -565,3 +565,32 @@ def convert_geo_arrays(Subj, minGeo, maxGeo):
     parc_minGeo[:Subj.parcs//2, hemis=="RH"] = np.NaN
     
     return parc_minGeo, parc_maxGeo
+
+def find_denom_range(min_dist, max_dist, min_vel, max_vel, lags, 
+                     fixed_velocity=False):
+    
+    n_steps = 50 # step size of interval range
+    
+    # shape (n_steps,n_regions,n_elecs)
+    dist_range = np.linspace(min_dist,max_dist,n_steps)
+    
+    # shape (n_steps)
+    vel_range = np.linspace(min_vel,max_vel,n_steps)
+    
+    # calculate denominator with equation (dist/vel - lags)
+    # shape (n_steps,n_steps,n_regions,n_elecs)
+    denom = (dist_range[np.newaxis,:] / vel_range.reshape((-1,1,1,1))) - lags
+    
+    # remove nonzero values
+    denom[denom < 0] = np.NaN
+    
+    if fixed_velocity:
+        axes = 1
+    else:
+        axes = (0,1)
+    
+    # max/minimize denominator over different distances and velocities (optional)
+    min_denom = np.nanmin(denom, axis=axes)
+    max_denom = np.nanmax(denom, axis=axes)
+    
+    return min_denom, max_denom
