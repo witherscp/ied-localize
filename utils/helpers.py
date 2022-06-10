@@ -557,5 +557,11 @@ def convert_geo_arrays(Subj, minGeo, maxGeo):
     for parc_idx in range(Subj.parcs):
         parc_minGeo[parc_idx,:] = np.nanmin(minGeo[Subj.parc2node_dict[parc_idx+1]], axis=0)
         parc_maxGeo[parc_idx,:] = np.nanmax(maxGeo[Subj.parc2node_dict[parc_idx+1]], axis=0)
-        
+    
+    hemis = np.array(list(Subj.elec2hemi_dict.values()))
+
+    # remove values for electrodes whose nodes were in other hemisphere
+    parc_minGeo[Subj.parcs//2:, hemis=="LH"] = np.NaN
+    parc_minGeo[:Subj.parcs//2, hemis=="RH"] = np.NaN
+    
     return parc_minGeo, parc_maxGeo
