@@ -537,3 +537,25 @@ def output_normalized_counts(num_counts, hemi_dict, n_parcs):
     output_df = output_df.reindex(list(range(1,n_parcs+1)),fill_value=0)
 
     return output_df
+
+def convert_geo_arrays(Subj, minGeo, maxGeo):
+    """Convert n_node x n_elec geodesic arrays to n_parc x n_elec.
+
+    Args:
+        Subj (Subject): instance of Subject class
+        minGeo (np.array): n_node x n_elec array of min geodesic distances
+        maxGeo (np.array): n_node x n_elec array of max geodesic distances
+
+    Returns:
+        tuple: parc_minGeo, parc_maxGeo (np.arrays with shape n_parc x n_elec)
+    """
+    
+    
+    parc_minGeo = np.full((Subj.parcs,minGeo.shape[1]),np.NaN)
+    parc_maxGeo = np.full((Subj.parcs,minGeo.shape[1]),np.NaN)
+
+    for parc_idx in range(Subj.parcs):
+        parc_minGeo[parc_idx,:] = np.nanmin(minGeo[Subj.parc2node_dict[parc_idx+1]], axis=0)
+        parc_maxGeo[parc_idx,:] = np.nanmax(maxGeo[Subj.parc2node_dict[parc_idx+1]], axis=0)
+        
+    return parc_minGeo, parc_maxGeo
