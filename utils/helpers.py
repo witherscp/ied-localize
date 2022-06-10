@@ -1,10 +1,12 @@
 from itertools import combinations, repeat
+from time import time
 
 import numpy as np
 import pandas as pd
 
-from .constants import (NUM_MAP, MAX_GEO_VEL, MIN_GEO_VEL, 
-                        MAX_WM_VEL, MIN_WM_VEL)
+from .colors import Colors
+from .constants import NUM_MAP
+
 
 def get_frequent_seqs(seqs, n_members=3, n_top=1, ordered=True):
     """Retrieves the {n_top} number of most frequent {n_member} sequences 
@@ -68,11 +70,27 @@ def compute_top_lead_elec(seqs):
     return elecs[np.argmax(counts)]
 
 def convert_parcs(parc_str):
+    """Convert a string of a list of parcels to a list of integers.
+
+    Args:
+        parc_str (str): str of list of parcel numbers
+
+    Returns:
+        list: list of parcel numbers (not indices)
+    """
     
     lst_str = parc_str.strip('][').split(', ')
     return map_func(lst_str, no_index=False)
 
 def convert_lobes(lobe_str):
+    """Convert a string of a list of lobes to a list of strings
+
+    Args:
+        lobe_str (str): str of list of lobe names
+
+    Returns:
+        list: list of string lobe names
+    """
     
     return lobe_str.replace("'",'').replace(' ','').strip('[]').split(',')
 
@@ -274,7 +292,8 @@ def roman2num(num):
     return result
 
 def compute_node2prop_arr(parc2prop_df, node2parc_df_dict, hemi=None):
-    """Return an array of proportions explained by individual nodes for plotting purposes.
+    """Return an array of proportions explained by individual nodes for 
+    plotting purposes.
 
     Args:
         parc2prop_df (pd.DataFrame): parcel to proportion dataframe
@@ -381,7 +400,7 @@ def retrieve_lead_counts(elec_df, seqs, delays, lead_times=[100]):
     return out_df
 
 def compute_mean_seq_length(seqs):
-    """Compute the mean sequence length
+    """Compute the mean sequence length.
 
     Args:
         seqs (np.array): sequence of electrodes (n_seqs x n_elecs)
@@ -393,7 +412,7 @@ def compute_mean_seq_length(seqs):
     return seqs[seqs != 'nan'].size / seqs.shape[0]
 
 def compute_mean_similarity(similarity_arr):
-    """Compute mean sequence similarity
+    """Compute mean sequence similarity.
 
     Returns:
         float: mean sequence similarity for a given cluster
@@ -445,7 +464,7 @@ def retrieve_delays(delays, seq_idxs, include_zero=False):
     return indexed_delays[mask]
 
 def output_lst_of_lsts(lst_of_lsts, my_dtype=float):
-    """Convert list of lists into numpy array.
+    """Convert a list of lists into numpy array.
 
     Args:
         lst_of_lsts (list): list of lists
@@ -469,7 +488,7 @@ def output_lst_of_lsts(lst_of_lsts, my_dtype=float):
 
 def reorient_coord(coord_arr, in_orient, out_orient):
     """
-    Change the orientation of a set of XYZ coordinates
+    Change the orientation of a set of XYZ coordinates.
 
     Args:
         coord_arr (np.array): XYZ coordinate array of shape (n_coords,3) with 
@@ -503,20 +522,17 @@ def reorient_coord(coord_arr, in_orient, out_orient):
 
     return coord_arr
 
-def constrain_velocities(min_arr, max_arr, is_geo=False, is_wm=False):
-    
-    assert is_geo or is_wm
-    
-    if is_geo:
-        min_arr = np.maximum(min_arr, MIN_GEO_VEL)
-        max_arr = np.minimum(max_arr, MAX_GEO_VEL)
-    else:
-        min_arr = np.maximum(min_arr, MIN_WM_VEL)
-        max_arr = np.minimum(max_arr, MAX_WM_VEL)
-    
-    return min_arr, max_arr
-
 def convert_list_to_dict(lst):
+    """Convert a list of source parcel lists to a dictionary with the 
+    proportion of sequences explained by each parcel.
+
+    Args:
+        lst (list): list of source lists (in do_localize_source.py)
+
+    Returns:
+        dict: dictionary with proportion of sequences explained by each source
+            parcel 
+    """
 
     out_dict = {}
 
@@ -528,6 +544,17 @@ def convert_list_to_dict(lst):
     return out_dict
 
 def output_normalized_counts(num_counts, hemi_dict, n_parcs):
+    """Convert source count dictionary to df for saving as csv.
+
+    Args:
+        num_counts (int): total number of sequences
+        hemi_dict (dict): dictionary of normalized source proportions
+        n_parcs (int): number of parcs total
+
+    Returns:
+        pd.DataFrame: dataframe index = parcNumber, 
+            column = propExplanatorySpikes
+    """
 
     normalized_lst = [(count / num_counts) for count in hemi_dict.values()]
     output_df = pd.DataFrame({"parcNumber":hemi_dict.keys(),
@@ -550,7 +577,6 @@ def convert_geo_arrays(Subj, minGeo, maxGeo):
         tuple: parc_minGeo, parc_maxGeo (np.arrays with shape n_parc x n_elec)
     """
     
-    
     parc_minGeo = np.full((Subj.parcs,minGeo.shape[1]),np.NaN)
     parc_maxGeo = np.full((Subj.parcs,minGeo.shape[1]),np.NaN)
 
@@ -566,31 +592,38 @@ def convert_geo_arrays(Subj, minGeo, maxGeo):
     
     return parc_minGeo, parc_maxGeo
 
-def find_denom_range(min_dist, max_dist, min_vel, max_vel, lags, 
-                     fixed_velocity=False):
+def hms(seconds):
+    """Convert seconds to hours, minutes, and seconds.
+
+    Args:
+        seconds (int): number of seconds
+
+    Returns:
+        str: {hours}h:{minutes}m:seconds{s}
+    """
     
-    n_steps = 50 # step size of interval range
-    
-    # shape (n_steps,n_regions,n_elecs)
-    dist_range = np.linspace(min_dist,max_dist,n_steps)
-    
-    # shape (n_steps)
-    vel_range = np.linspace(min_vel,max_vel,n_steps)
-    
-    # calculate denominator with equation (dist/vel - lags)
-    # shape (n_steps,n_steps,n_regions,n_elecs)
-    denom = (dist_range[np.newaxis,:] / vel_range.reshape((-1,1,1,1))) - lags
-    
-    # remove nonzero values
-    denom[denom < 0] = np.NaN
-    
-    if fixed_velocity:
-        axes = 1
-    else:
-        axes = (0,1)
-    
-    # max/minimize denominator over different distances and velocities (optional)
-    min_denom = np.nanmin(denom, axis=axes)
-    max_denom = np.nanmax(denom, axis=axes)
-    
-    return min_denom, max_denom
+    h = seconds // 3600
+    m = seconds % 3600 // 60
+    s = seconds % 3600 % 60
+    return f'{h:02d}h:{m:02d}m:{s:02d}s'
+
+def print_progress_update(i, start_time, n_seqs):
+    """Print out progress update on source localization.
+
+    Args:
+        i (int): current working sequence
+        start_time (time.Time): time when localization started
+        n_seqs (int): number of sequences total
+    """
+
+    # print out progress update for user to track
+    time_now = time()
+    time_elapsed = time_now - start_time
+    str_time_elapsed = hms(round(time_elapsed))
+    time_remaining = (time_elapsed/i)*(n_seqs-i)
+    str_time_left = hms(round(time_remaining))
+    print(Colors.YELLOW, f"#{i}/{n_seqs} Sequences Complete:", Colors.END)
+    print(Colors.BLUE,
+          (f"Time Elapsed = {str_time_elapsed} ... "
+           f"Estimated Time Remaining = {str_time_left}"),
+          Colors.END)

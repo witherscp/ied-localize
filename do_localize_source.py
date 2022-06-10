@@ -5,14 +5,14 @@ from warnings import filterwarnings
 filterwarnings("ignore", category=RuntimeWarning)
 
 from ied_repo.analysis import *
-from ied_repo.utils import *
+from ied_repo.utils import print_progress_update, lead_geodesic, lead_wm
 
 if __name__ == "__main__":
 
   # parse arguments
 
   purpose = ("to localize the putative source of interictal spike sequences"
-              "using geodesic distances ONLY and spike timings")
+              "using GM, WM, and spike timings")
   parser = ArgumentParser(description=purpose)
   parser.add_argument("subj", help="subject code")
   parser.add_argument("--only_geo", action='store_true',
@@ -70,8 +70,16 @@ if __name__ == "__main__":
       seqs, delays = s.fetch_sequences(cluster=cluster)
       all_source_parcs = []
       
+      # get start time for estimating time left to completion
+      start_time = time()
+      n_seqs = seqs.shape[0]
+      
       # iterate through sequences
       for i in range(seqs.shape[0]):
+
+          # print progress report every 50 sequences
+          if ((i % 100) == 0) & (i != 0):
+            print_progress_update(i, start_time, n_seqs)
 
           # list type
           elecs = [elec for elec in seqs[i,:] if elec != 'nan']
