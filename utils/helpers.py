@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 from .colors import Colors
-from .constants import NUM_MAP
+from .constants import N_NODES, NUM_MAP
 
 
 def get_frequent_seqs(seqs, n_members=3, n_top=1, ordered=True):
@@ -93,38 +93,6 @@ def convert_lobes(lobe_str):
     """
     
     return lobe_str.replace("'",'').replace(' ','').strip('[]').split(',')
-
-def convert_elec_to_parc(elec2parc_df, elec, no_index=False):
-    """Get a list of parcels (or parcel indices) associated with a given 
-    electrode
-
-    Args:
-        elec2parc_df (pd.DataFrame): electrode to parcel lookup table
-        elec (str): electrode name
-        no_index (bool, optional): retrieve the parcel numbers instead of 
-            parcel indices. Defaults to False.
-
-    Returns:
-        list: list of parcel indices (or numbers)
-    """
-    
-    parcs = elec2parc_df[elec2parc_df['elecLabel'] == elec]['parcNumber']
-    parcs = parcs.iloc[0].strip('][').split(', ')
-    return map_func(parcs, no_index=no_index)
-
-def convert_elec_to_lobe(elec2lobe_df, elec):
-    """Get a list of lobes associated with a given electrode
-
-    Args:
-        elec2lobe_df (pd.DataFrame): electrode to lobe lookup table
-        elec (str): electrode name
-
-    Returns:
-        list: list of lobes
-    """
-    
-    lobes = elec2lobe_df[elec2lobe_df['elecLabel'] == elec]['Lobe']
-    return lobes.iloc[0].replace("'",'').replace(' ','').strip('[]').split(',')
     
 def map_func(lst_str, no_index=False):
     """Map a list of strings to a list of integers
@@ -223,11 +191,11 @@ def compute_elec2parc_euc(elec2parc_euc_arr, elec_idx, parc):
     
     return elec2parc_euc_arr[parc-1, elec_idx]
 
-def compute_elec2parc_geo(node2parc_df_dict, elec2node_geo_arr, elec_idx, parc):
+def compute_elec2parc_geo(parc2node_dict, elec2node_geo_arr, elec_idx, parc):
     """Return the geodesic distance between an electrode index and parcel.
 
     Args:
-        node2parc_df_dict (dict): keys: "LH","RH"; values: node to parcel df
+        parc2node_dict (dict): keys: parcel number; values: node list
         elec2node_geo_arr (np.array): array of electrode to node geodesic 
             distances
         elec_idx (int): electrode index (use: self.get_elec_idx(elec))
@@ -237,18 +205,7 @@ def compute_elec2parc_geo(node2parc_df_dict, elec2node_geo_arr, elec_idx, parc):
         float: minimum geodesic distance between electrode and parcel
     """ 
     
-    n_parcs = int(node2parc_df_dict['LH']['parcel'].max() * 2)
-    
-    hemi = get_parcel_hemi(parc, n_parcs)
-    
-    node2parc_df = node2parc_df_dict[hemi]
-    
-    if hemi == "RH":
-        mask = (node2parc_df['parcel'] == (parc - int(n_parcs/2)))
-    else:
-        mask = (node2parc_df['parcel'] == parc)
-    
-    parc_nodes = node2parc_df[mask]['node'].to_numpy(dtype=int)
+    parc_nodes = parc2node_dict[parc]
     
     return np.min(elec2node_geo_arr[parc_nodes,elec_idx])
 
@@ -291,7 +248,7 @@ def roman2num(num):
             result -= roman_numerals[c]
     return result
 
-def compute_node2prop_arr(parc2prop_df, node2parc_df_dict, hemi=None):
+def compute_node2prop_arr(parc2prop_df, parc2node_dict, n_parcs, hemi=None):
     """Return an array of proportions explained by individual nodes for 
     plotting purposes.
 
@@ -309,44 +266,34 @@ def compute_node2prop_arr(parc2prop_df, node2parc_df_dict, hemi=None):
         # find hemisphere of maximal parcel
         if parc2prop_df['propExplanatorySpikes'].idxmax() < (len(parc2prop_df) // 2):
             hemi = "LH"
+            parc_range = range(1,(n_parcs//2)+1)
         else:
             hemi = "RH"
-    
-    # load node2parc_df and set proportion default to zero
-    node2parc_df = node2parc_df_dict[hemi.upper()]
-    node2parc_df['proportion'] = 0
-    
-    n_parcs = int(node2parc_df['parcel'].max() * 2)
+            parc_range = range((n_parcs//2)+1,n_parcs+1)
 
-    # get list of possible parcel numbers based on n_parcs and hemi
-    possible_parcs = range(1,(int(n_parcs/2) + 1))
-    if hemi.lower() == "rh":
-        possible_parcs = [(n + int(n_parcs/2)) for n in possible_parcs]
+    # initialize empty proportion array
+    node2prop_arr = np.zeros(N_NODES)
 
     # update node2parc proportion at each parcel
-    for parc in possible_parcs:
-        if hemi.lower() == "rh":
-            mask = (node2parc_df['parcel'] == (parc - int(n_parcs/2)))
-        else:
-            mask = (node2parc_df['parcel'] == parc)
+    for parc in parc_range:
         
         # get proportion for particular parcel
         parc_slice = parc2prop_df[parc2prop_df.index == parc]
         proportion = parc_slice['propExplanatorySpikes'].iloc[0]
         
         # set all nodes of particular parcel to correct proportion
-        node2parc_df.loc[mask,'proportion'] = proportion
+        node2prop_arr[parc2node_dict[parc]] = proportion
     
-    return node2parc_df.proportion.to_numpy(), hemi.upper()
+    return node2prop_arr, hemi.upper()
 
-def retrieve_lead_counts(elec_df, seqs, delays, lead_times=[100]):
+def retrieve_lead_counts(elec_names, seqs, delays, lead_times=[100]):
     """Create a dataframe containing the frequency for which each electrode
     occurs first in sequence. Optionally, use lead_times array to also create 
     columns for the number of times each electrode occurs within the 
     first xx ms. 
 
     Args:
-        elec_df (pd.DataFrame): df of electrode names
+        elec_names (list): list of electrode names
         seqs (np.array): n_seqs x n_elecs array with names of electrodes firing
             within each sequence. 'nan' is used to fill blank positions
         delays (np.array): n_seqs x n_elecs array with lag times; np.NaN is 
@@ -361,7 +308,7 @@ def retrieve_lead_counts(elec_df, seqs, delays, lead_times=[100]):
     
     # fill dictionary with default values
     out_dict = {}
-    for elec in elec_df.chanName:
+    for elec in elec_names:
         out_dict.setdefault(elec, default_val.copy())
     
     # iterate through sequences

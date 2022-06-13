@@ -68,8 +68,7 @@ def plot_prop_explained_histogram(parc2prop, hemi, n_parcs=600):
     return fig
 
 def plot_source_localization(Subj, 
-                             surfs=['pial','inf_200'], 
-                             n_parcs=600, 
+                             surfs=['pial','inf_200'],
                              cmap='Spectral_r',
                              dist=45,
                              only_geo=False,
@@ -81,7 +80,6 @@ def plot_source_localization(Subj,
     Args:
         Subj (utils.subject.Subject): instance of Subject class
         surfs (list, optional): surfaces of interest. Defaults to ['pial','inf_200'].
-        n_parcs (int, optional): number of Schaefer parcels. Defaults to 600.
         cmap (str, optional): colormap used to display results. Defaults to 'Spectral_r'.
         dist (int, optional): Geodesic search distance in mm. Defaults to 
             45.
@@ -122,7 +120,8 @@ def plot_source_localization(Subj,
                                                         )
 
         node2prop_arr, hemi = compute_node2prop_arr(parc2prop, 
-                                                    Subj.node2parc_df_dict)
+                                                    Subj.parc2node_dict,
+                                                    Subj.parcs)
 
         # load array of sulci contours
         sulc_file = general_dir / f"std.141.{hemi.lower()}.sulc.1D.dset"
@@ -347,7 +346,6 @@ def get_border_nodes(Subj, parcel):
             shape (n_nodes,1). Use array_to_niml() to convert to niml.dset
     """
     
-    
     hemi = get_parcel_hemi(parcel, Subj.parcs)
     topo_path = Subj.dirs['surf'] / "pial.1D.topo"
     
@@ -357,8 +355,7 @@ def get_border_nodes(Subj, parcel):
         topo_node_arr = np.loadtxt(topo_path, delimiter=' ', dtype=int)
     
     # convert nodes to parcels
-    node2parc_dict = Subj.node2parc_df_dict[hemi].set_index("node").to_dict()['parcel']
-    topo_parc_arr = np.vectorize(node2parc_dict.get)(topo_node_arr)
+    topo_parc_arr = np.vectorize(Subj.node2parc_hemi_dict[hemi].get)(topo_node_arr)
     
     # get all triangles that have at least 2 unique parcels
     border_idx = ~np.logical_and(

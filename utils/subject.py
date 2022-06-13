@@ -182,7 +182,7 @@ class Subject:
             row = seqs[i,:]
             elecs = [elec for elec in row if elec != "nan"]
             for j, elec in enumerate(elecs):
-                parcs = convert_elec_to_parc(self.elec2parc_df, elec)
+                parcs = self.elec2parc_dict[elec]
                 if len(parcs) > 0:
                     new_seqs[-1].append(elec)
                     new_delays[-1].append(delays[i,j])
@@ -595,7 +595,7 @@ class Subject:
                     lead = compute_top_lead_elec(seqs)
 
                     # get lead index
-                    lead_idx = self.get_elec_idx(lead)
+                    lead_idx = self.elec2index_dict[lead]
 
                     # find closest parcel to lead_idx
                     top_parc_idxs = [parc - 1 for parc in sources_to_compare]
@@ -644,23 +644,11 @@ class Subject:
                 self.engel_months = engel_months
                 return
 
-        # since none of the class columns were filled-in, set months to np.nan
-        engel_months = np.nan
+        # since none of the class columns were filled-in, set months to np.NaN
+        engel_months = np.NaN
 
         self.engel_class = engel_class
         self.engel_months = engel_months
-
-    def get_elec_idx(self, elec):
-        """Get index of electrode using self.elec_labels_df.
-
-        Args:
-            elec (str): electrode name
-
-        Returns:
-            int: electrode index
-        """
-
-        return self.elec_labels_df[self.elec_labels_df['chanName'] == elec].index[0]
 
     def compute_lead_elec_parc2prop_df(self, cluster):
         """Compute a lookup table of parcel to proportion explained for leading
@@ -684,7 +672,7 @@ class Subject:
         parc_counts = {}
         for elec in lead_elecs:
             # get electrode parcel indices
-            parc_idxs = convert_elec_to_parc(self.elec2parc_df, elec)
+            parc_idxs = [parc - 1 for parc in self.elec2parc_dict[elec]]
 
             # update count for each parcel
             for parc_idx in parc_idxs:
@@ -721,11 +709,10 @@ class Subject:
                 parcel -= int(self.parcs / 2)
 
             # get hemi_specific df
-            hemi_node2parc = self.node2parc_df_dict[hemi]
             hemi_node2rsxn = self.node2rsxn_df_dict[hemi]
 
             # mask out nodes for parcel and find proportion of nodes resected
-            parc_nodes = hemi_node2parc[hemi_node2parc.parcel == parcel].index
+            parc_nodes = self.parc2node_dict[parcel]
             resected_prop = hemi_node2rsxn.iloc[parc_nodes].mean()['is_resected']
 
             # add to list
@@ -761,18 +748,12 @@ class Subject:
         # retrieve array of 0s (non-resected) and 1s (resected)
         rsxn_arr = self.node2rsxn_df_dict[hemi.upper()]['is_resected'].to_numpy(dtype=float).copy()
 
-        # get node2parc_df
-        node2parc_df = self.node2parc_df_dict[hemi.upper()]
-
         # get resection props
         rsxn_props = self.compute_resected_prop(sources)
 
         for source,rsxn_prop in zip(sources,rsxn_props):
 
-            if hemi.lower() == "rh":
-                mask = (node2parc_df['parcel'] == (source - int(self.parcs/2)))
-            else:
-                mask = (node2parc_df['parcel'] == source)
+            mask = self.parc2node_dict[source]
 
             accuracy = get_prediction_accuracy(self.engel_class, rsxn_prop)
 
@@ -840,7 +821,7 @@ class Subject:
         """
 
         seqs, delays = self.fetch_sequences(cluster)
-        elec_count_df = retrieve_lead_counts(self.elec_labels_df,
+        elec_count_df = retrieve_lead_counts(self.elec2index_dict.keys(),
                                              seqs,
                                              delays
                                             )
@@ -848,7 +829,7 @@ class Subject:
 
         lobe_count_dict = {}
         for elec, count in elec_count_dict.items():
-            lobes = convert_elec_to_lobe(self.elec2lobe_df, elec)
+            lobes = self.elec2lobe_dict[elec]
             for lobe in lobes:
                 # ignore electrodes without a parcel assigned
                 if lobe == '':
@@ -895,12 +876,12 @@ class Subject:
         seqs, delays = self.fetch_sequences(cluster=cluster)
 
         if use_all_seqs:
-            count_df = retrieve_lead_counts(self.elec_labels_df,
+            count_df = retrieve_lead_counts(self.elec2index_dict.keys(),
                                             seqs,
                                             delays)
         else:
             source_idxs = self.compute_localizing_seq_idxs(cluster=cluster, source=source)
-            count_df = retrieve_lead_counts(self.elec_labels_df,
+            count_df = retrieve_lead_counts(self.elec2index_dict.keys(),
                                             seqs[source_idxs,:],
                                             delays[source_idxs,:])
 
@@ -921,9 +902,9 @@ class Subject:
         for elec, count in count_dict.items():
             if count == 0:
                 continue
-            elec_idx = self.get_elec_idx(elec)
+            elec_idx = self.elec2index_dict[elec]
             if use_geo:
-                dist = compute_elec2parc_geo(self.node2parc_df_dict,
+                dist = compute_elec2parc_geo(self.parc2node_dict,
                                              minGeo,
                                              elec_idx,
                                              source)
@@ -982,9 +963,9 @@ class Subject:
             
             max_dist = 0
             for elec in elecs:
-                elec_idx = self.get_elec_idx(elec)
+                elec_idx = self.elec2index_dict[elec]
                 if use_geo:
-                    dist = compute_elec2parc_geo(self.node2parc_df_dict,
+                    dist = compute_elec2parc_geo(self.parc2node_dict,
                                                  minGeo,
                                                  elec_idx,
                                                  source)
@@ -1089,7 +1070,7 @@ class Subject:
         # iterate through sequences, ignoring 'nan' values
         for i in range(n_sequences):
             seq = [elec for elec in seqs[i,:] if elec != 'nan']
-            elec_idxs = [self.get_elec_idx(elec) for elec in seq]
+            elec_idxs = [self.elec2index_dict[elec] for elec in seq]
             
             # Get the list of all neighbor indices within neighbor threshold
             neighbors = set(np.argwhere(
@@ -1155,9 +1136,9 @@ class Subject:
             min_dist = np.Inf
             closest_position = -1
             for j in range(len(elecs)):
-                elec_idx = self.get_elec_idx(elecs[j])
+                elec_idx = self.elec2index_dict[elecs[j]]
                 if use_geo:
-                    dist = compute_elec2parc_geo(self.node2parc_df_dict,
+                    dist = compute_elec2parc_geo(self.parc2node_dict,
                                                  minGeo,
                                                  elec_idx,
                                                  source)
@@ -1221,9 +1202,9 @@ class Subject:
             seq_dists = np.zeros(len(elecs))
 
             for j, elec in enumerate(elecs):
-                elec_idx = self.get_elec_idx(elec)
+                elec_idx = self.elec2index_dict[elec]
                 if use_geo:
-                    dist = compute_elec2parc_geo(self.node2parc_df_dict,
+                    dist = compute_elec2parc_geo(self.parc2node_dict,
                                                  minGeo,
                                                  elec_idx,
                                                  source)

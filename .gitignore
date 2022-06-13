@@ -1,3 +1,4 @@
 # ignore directories
 notebooks
 __pycache__
+.vscode
