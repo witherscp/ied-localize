@@ -601,3 +601,29 @@ def print_progress_update(i, start_time, n_seqs):
         ),
         Colors.END,
     )
+
+
+def extend_lst_of_lsts(lst_of_lsts):
+    """Uniformize the length of each list in a list_of_lists by repeatedly 
+    appending the last term to each list, until lengths match. Ex: 
+    [[0,1], [2,4,5], [1]] --> [[0,1,1], [2,4,5], [1,1,1]]. This function is
+    used in lead_geodesic() within localize.py.
+
+    Args:
+        lst_of_lsts (list): list of lists
+
+    Returns:
+        list: list of lists with uniform lengths
+    """
+    
+    max_len = max([len(lst) for lst in lst_of_lsts])
+    out_lst = []
+    
+    for lst in lst_of_lsts:
+        
+        while len(lst) < max_len:
+            lst.append(lst[-1])
+        
+        out_lst.append(lst)
+            
+    return out_lst

@@ -6,6 +6,7 @@ filterwarnings("ignore", category=RuntimeWarning)
 import numpy as np
 
 from .constants import *
+from .helpers import extend_lst_of_lsts
 
 
 def lead_geodesic(
@@ -97,62 +98,68 @@ def lead_geodesic(
         min_v_geo[:, other_hemi_mask] = np.NaN
         max_v_geo[:, other_hemi_mask] = np.NaN
 
-        # iterate through parcel combos
-        for f_parc_idxs_combo in product(*f_parc_idxs):
+        # match lengths of all parc_idx lists, for simultaneous indexing
+        f_parc_idxs = extend_lst_of_lsts(f_parc_idxs)
 
-            # fill arrays
-            parc_min_bl = minBL[:, f_parc_idxs_combo]
-            parc_max_bl = maxBL[:, f_parc_idxs_combo]
+        # fill bl arrays of shape (n_parcs, n_elecs, max(n_parc_idxs))
+        parc_min_bl_all = minBL[:, f_parc_idxs]
+        parc_max_bl_all = maxBL[:, f_parc_idxs]
+        
+        # downsize arrays based on the assumption that nearby parcels have
+        # overlapping ranges of bundle length, when they are both connected
+        # to the same parcel
+        parc_min_bl = np.nanmin(parc_min_bl_all, axis=2)
+        parc_max_bl = np.nanmax(parc_max_bl_all, axis=2)
 
-            # find min/max of denominator (dist/vel - lags) on interval [0,inf]
-            parc_min_denom, parc_max_denom = find_denom_range(
-                parc_min_bl, parc_max_bl, MIN_WM_VEL, MAX_WM_VEL, lags, n_steps=n_steps
-            )
+        # find min/max of denominator (dist/vel - lags) on interval [0,inf]
+        parc_min_denom, parc_max_denom = find_denom_range(
+            parc_min_bl, parc_max_bl, MIN_WM_VEL, MAX_WM_VEL, lags, n_steps=n_steps
+        )
 
-            # initialize n_node x n_elec arrays to store denominators
-            min_denom = np.full((N_NODES, n_followers), np.NaN)
-            max_denom = np.full((N_NODES, n_followers), np.NaN)
+        # initialize n_node x n_elec arrays to store denominators
+        min_denom = np.full((N_NODES, n_followers), np.NaN)
+        max_denom = np.full((N_NODES, n_followers), np.NaN)
 
-            # convert (n_parcs x n_elecs) to (n_nodes x n_elecs)
-            for parc_idx in np.unique(np.where(~np.isnan(parc_min_denom))[0]):
-                nodes = Subj.parc2node_dict[parc_idx + 1]
-                min_denom[nodes, :] = parc_min_denom[parc_idx, :]
-                max_denom[nodes, :] = parc_max_denom[parc_idx, :]
+        # convert (n_parcs x n_elecs) to (n_nodes x n_elecs)
+        for parc_idx in np.unique(np.where(~np.isnan(parc_min_denom))[0]):
+            nodes = Subj.parc2node_dict[parc_idx + 1]
+            min_denom[nodes, :] = parc_min_denom[parc_idx, :]
+            max_denom[nodes, :] = parc_max_denom[parc_idx, :]
 
-            # compute min/max velocity geo (combo method) using equations from
-            # methods section
-            combo_min_v_geo = aveGeo[:, l_elec_idx][:, np.newaxis] / max_denom
-            combo_max_v_geo = aveGeo[:, l_elec_idx][:, np.newaxis] / min_denom
+        # compute min/max velocity geo (combo method) using equations from
+        # methods section
+        combo_min_v_geo = aveGeo[:, l_elec_idx][:, np.newaxis] / max_denom
+        combo_max_v_geo = aveGeo[:, l_elec_idx][:, np.newaxis] / min_denom
 
-            (combo_min_v_geo, combo_max_v_geo) = constrain_velocities(
-                combo_min_v_geo, combo_max_v_geo, is_geo=True
-            )
+        (combo_min_v_geo, combo_max_v_geo) = constrain_velocities(
+            combo_min_v_geo, combo_max_v_geo, is_geo=True
+        )
 
-            # create matrix of shape (N_NODES,n_elecs,v/combo_v,min/max)
-            master_v = np.stack(
-                (
-                    np.stack((min_v_geo, combo_min_v_geo), axis=-1),
-                    np.stack((max_v_geo, combo_max_v_geo), axis=-1),
-                ),
-                axis=-1,
-            )
+        # create matrix of shape (N_NODES,n_elecs,v/combo_v,min/max)
+        master_v = np.stack(
+            (
+                np.stack((min_v_geo, combo_min_v_geo), axis=-1),
+                np.stack((max_v_geo, combo_max_v_geo), axis=-1),
+            ),
+            axis=-1,
+        )
 
-            # shuffle combinations of v/combo_v
-            # shuffled array has shape (N_NODES,2**n_elecs,n_elecs,min/max)
-            # each index in the second dimension is a different combination
-            # of v/combo_v
-            shuffled = master_v[
-                :, range(n_followers), list(product(range(2), repeat=n_followers)), :
-            ]
+        # shuffle combinations of v/combo_v
+        # shuffled array has shape (N_NODES,2**n_elecs,n_elecs,min/max)
+        # each index in the second dimension is a different combination
+        # of v/combo_v
+        shuffled = master_v[
+            :, range(n_followers), list(product(range(2), repeat=n_followers)), :
+        ]
 
-            # find overlapping interval along axis=2 (electrodes)
-            # largest_min and smallest_max have shape (N_NODES,2**n_elecs)
-            largest_min_v = np.max(shuffled[:, :, :, 0], axis=2)
-            smallest_max_v = np.min(shuffled[:, :, :, 1], axis=2)
+        # find overlapping interval along axis=2 (electrodes)
+        # largest_min and smallest_max have shape (N_NODES,2**n_elecs)
+        largest_min_v = np.max(shuffled[:, :, :, 0], axis=2)
+        smallest_max_v = np.min(shuffled[:, :, :, 1], axis=2)
 
-            # find any combination that had an overlapping interval for a node
-            overlapping = np.any((smallest_max_v > largest_min_v), axis=1)
-            source_indices = np.where(overlapping)[0]
+        # find any combination that had an overlapping interval for a node
+        overlapping = np.any((smallest_max_v > largest_min_v), axis=1)
+        source_indices = np.where(overlapping)[0]
 
     # convert indices to parcels
     if source_indices.size == 0:
