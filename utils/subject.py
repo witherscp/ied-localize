@@ -25,6 +25,7 @@ class Subject:
         use_weighted=True,
         use_best=True,
         in_progress=False,
+        cutoff=0.5
     ):
         """Create an instance of Subject for analysis of IED spike data
 
@@ -44,6 +45,9 @@ class Subject:
             use_best (bool, optional): For narrowing down sources from all 
                 to one, only compare the parcels tied for highest proportion 
                 explained (don't consider the top 5%). Defaults to True.
+            cutoff (float, optional): the minimum proportion of sequences 
+                explained for a cluster to be considered localized. Defaults to
+                0.5.
         """
 
         # set values
@@ -80,7 +84,7 @@ class Subject:
         if not in_progress:
             self._update_cluster_types()
             self._update_source_parcels(
-                dist=dist, use_weighted=use_weighted, use_best=use_best
+                dist=dist, use_weighted=use_weighted, use_best=use_best, cutoff=cutoff
             )
             self._update_engel_class()
             if self.engel_class not in ("no_resection", "no_outcome", "deceased"):
@@ -569,7 +573,9 @@ class Subject:
 
         self.cluster_hemis = cluster_hemi_dict
 
-    def _update_source_parcels(self, dist=45, use_weighted=True, use_best=True):
+    def _update_source_parcels(
+        self, dist=45, use_weighted=True, use_best=True, cutoff=0.5
+    ):
         """Update self.valid_sources_all with a set of every possible source
         for each cluster. Update self.valid_sources_one with a single source
         for each cluster (choosing the one that is closest to the most frequent
@@ -583,6 +589,9 @@ class Subject:
             use_best (bool, optional): For narrowing down sources from all 
                 to one, only compare the parcels tied for highest proportion 
                 explained (don't consider the top 5%). Defaults to True.
+            cutoff (float, optional): the minimum proportion of sequences 
+                explained for a cluster to be considered localized. Defaults to
+                0.5.
         """
 
         valid_sources_all, valid_sources_one = {}, {}
@@ -597,7 +606,7 @@ class Subject:
             ).head(1)
             top_proportion = top_parc["propExplanatorySpikes"].iloc[0]
 
-            if top_proportion > 0.5:
+            if top_proportion > cutoff:
                 valid_sources_all[cluster] = set(
                     parc2prop_df.loc[
                         parc2prop_df["propExplanatorySpikes"] > (top_proportion - 0.05)
