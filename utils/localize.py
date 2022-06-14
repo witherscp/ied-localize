@@ -250,73 +250,80 @@ def lead_wm(
                 combo_min_v_wm, combo_max_v_wm, is_wm=True
             )
 
-        for f_parc_idxs_combo in product(*f_parc_idxs):
+        # match lengths of all parc_idx lists, for simultaneous indexing
+        f_parc_idxs = extend_lst_of_lsts(f_parc_idxs)
 
-            # fill arrays
-            parc_min_bl = minBL[:, f_parc_idxs_combo]
-            parc_max_bl = maxBL[:, f_parc_idxs_combo]
+        # fill bl arrays of shape (n_parcs, n_elecs, max(n_parc_idxs))
+        parc_min_bl_all = minBL[:, f_parc_idxs]
+        parc_max_bl_all = maxBL[:, f_parc_idxs]
+        
+        # downsize arrays based on the assumption that nearby parcels have
+        # overlapping ranges of bundle length, when they are both connected
+        # to the same parcel
+        parc_min_bl = np.nanmin(parc_min_bl_all, axis=2)
+        parc_max_bl = np.nanmax(parc_max_bl_all, axis=2)
 
-            # find min/max of denominator (dist/vel - lags) on interval [0,inf]
-            parc_min_denom, parc_max_denom = find_denom_range(
-                parc_min_bl, parc_max_bl, MIN_WM_VEL, MAX_WM_VEL, lags, n_steps=n_steps
+        # find min/max of denominator (dist/vel - lags) on interval [0,inf]
+        parc_min_denom, parc_max_denom = find_denom_range(
+            parc_min_bl, parc_max_bl, MIN_WM_VEL, MAX_WM_VEL, lags, n_steps=n_steps
+        )
+
+        # compute min/max velocity wm using equation from methods section
+        min_v_wm = aveBL[:, l_parc_idx][:, np.newaxis] / parc_max_denom
+        max_v_wm = aveBL[:, l_parc_idx][:, np.newaxis] / parc_min_denom
+        min_v_wm, max_v_wm = constrain_velocities(min_v_wm, max_v_wm, is_wm=True)
+
+        # check possibilities where followers are only WM
+        if only_wm:
+
+            # check for existence of overlapping range
+            largest_min_v = np.max(min_v_wm, axis=1)
+            smallest_max_v = np.min(max_v_wm, axis=1)
+            source_parcs = source_parcs.union(
+                set(np.where(smallest_max_v > largest_min_v)[0])
             )
 
-            # compute min/max velocity wm using equation from methods section
-            min_v_wm = aveBL[:, l_parc_idx][:, np.newaxis] / parc_max_denom
-            max_v_wm = aveBL[:, l_parc_idx][:, np.newaxis] / parc_min_denom
-            min_v_wm, max_v_wm = constrain_velocities(min_v_wm, max_v_wm, is_wm=True)
+        # check possibilities where followers are WM or geodesic
+        else:
 
-            # check possibilities where followers are only WM
-            if only_wm:
+            # broadcast min/max_v_wm arrays to stack with combo arrays
+            # these will have shape (n_steps, n_parcs, n_followers)
+            min_v_wm = np.broadcast_to(min_v_wm, (n_steps, *min_v_wm.shape))
+            max_v_wm = np.broadcast_to(max_v_wm, (n_steps, *max_v_wm.shape))
 
-                # check for existence of overlapping range
-                largest_min_v = np.max(min_v_wm, axis=1)
-                smallest_max_v = np.min(max_v_wm, axis=1)
-                source_parcs = source_parcs.union(
-                    set(np.where(smallest_max_v > largest_min_v)[0])
-                )
+            # stack arrays to find all combinations, creates array of shape
+            # (n_steps, n_parcs, n_followers, v/combo_v, min/max)
+            master_v = np.stack(
+                (
+                    np.stack((min_v_wm, combo_min_v_wm), axis=-1),
+                    np.stack((max_v_wm, combo_max_v_wm), axis=-1),
+                ),
+                axis=-1,
+            )
 
-            # check possibilities where followers are WM or geodesic
-            else:
+            # shuffle combinations of v/combo_v, creating array with shape
+            # (n_steps, n_parcs, 2**n_followers, n_followers, min/max)
+            # each index in the second dimension is a different combination
+            # of v/combo_v
+            shuffled = master_v[
+                :,
+                :,
+                range(n_followers),
+                list(product(range(2), repeat=n_followers)),
+                :,
+            ]
 
-                # broadcast min/max_v_wm arrays to stack with combo arrays
-                # these will have shape (n_steps, n_parcs, n_followers)
-                min_v_wm = np.broadcast_to(min_v_wm, (n_steps, *min_v_wm.shape))
-                max_v_wm = np.broadcast_to(max_v_wm, (n_steps, *max_v_wm.shape))
+            # find overlapping interval along axis=3 (electrodes)
+            # largest_min and smallest_max have shape
+            # (n_steps, n_parcs, 2**n_elecs)
+            largest_min_v = np.max(shuffled[:, :, :, :, 0], axis=3)
+            smallest_max_v = np.min(shuffled[:, :, :, :, 1], axis=3)
 
-                # stack arrays to find all combinations, creates array of shape
-                # (n_steps, n_parcs, n_followers, v/combo_v, min/max)
-                master_v = np.stack(
-                    (
-                        np.stack((min_v_wm, combo_min_v_wm), axis=-1),
-                        np.stack((max_v_wm, combo_max_v_wm), axis=-1),
-                    ),
-                    axis=-1,
-                )
-
-                # shuffle combinations of v/combo_v, creating array with shape
-                # (n_steps, n_parcs, 2**n_followers, n_followers, min/max)
-                # each index in the second dimension is a different combination
-                # of v/combo_v
-                shuffled = master_v[
-                    :,
-                    :,
-                    range(n_followers),
-                    list(product(range(2), repeat=n_followers)),
-                    :,
-                ]
-
-                # find overlapping interval along axis=3 (electrodes)
-                # largest_min and smallest_max have shape
-                # (n_steps, n_parcs, 2**n_elecs)
-                largest_min_v = np.max(shuffled[:, :, :, :, 0], axis=3)
-                smallest_max_v = np.min(shuffled[:, :, :, :, 1], axis=3)
-
-                # find any combination that had an overlapping interval for a
-                # parcel
-                source_parcs = source_parcs.union(
-                    set(np.where(smallest_max_v > largest_min_v)[1])
-                )
+            # find any combination that had an overlapping interval for a
+            # parcel
+            source_parcs = source_parcs.union(
+                set(np.where(smallest_max_v > largest_min_v)[1])
+            )
 
     # return list of source parcels
     if len(source_parcs) == 0:
