@@ -25,7 +25,6 @@ data_directories = {
 # propagation parameters
 MAX_WM_VEL = 3
 MIN_WM_VEL = 1.2
-
 MAX_GEO_VEL = 0.45
 MIN_GEO_VEL = 0.25
 

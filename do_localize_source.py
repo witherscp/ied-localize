@@ -67,7 +67,7 @@ if __name__ == "__main__":
     odir.mkdir(parents=True, exist_ok=True)
 
     minBL, maxBL, minGeo, maxGeo = s.fetch_minmax_distances()
-    maxBL[np.diag_indices_from(maxBL)] = 10
+    maxBL[np.diag_indices_from(maxBL)] = 20
 
     parc_minGeo, parc_maxGeo = convert_geo_arrays(s, minGeo, maxGeo)
 
