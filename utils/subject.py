@@ -72,9 +72,6 @@ class Subject:
         self.elec_euc_arr = self._fetch_elec_euc_arr()
 
         # update attributes
-        self._update_engel_class()
-        if self.engel_class not in ("no_resection", "no_outcome", "deceased"):
-            self.node2rsxn_df_dict = self._fetch_node2rsxn_df_dict()
         self._update_num_clusters()
         self._update_cluster_num_sequences()
         self._update_cluster_hemispheres()
@@ -85,6 +82,9 @@ class Subject:
             self._update_source_parcels(
                 dist=dist, use_weighted=use_weighted, use_best=use_best
             )
+            self._update_engel_class()
+            if self.engel_class not in ("no_resection", "no_outcome", "deceased"):
+                self.node2rsxn_df_dict = self._fetch_node2rsxn_df_dict()
 
     def _update_ied_subdirs(self):
         """Add IED subdirectories."""
