@@ -24,37 +24,37 @@ def get_frequent_seqs(seqs, n_members=3, n_top=1, ordered=True):
     Returns:
         dict: Dictionary of most common sequences and number of occurences.
     """
-    
+
     assert n_top >= 1
     assert n_members >= 2
     assert isinstance(ordered, bool)
-    
+
     seq_groups_dict = {}
 
     # iterate through sequences
     for i in range(seqs.shape[0]):
-        row = seqs[i,:]
+        row = seqs[i, :]
         elecs = row[row != "nan"]
-        combs_iter = combinations(elecs,n_members)
-        
+        combs_iter = combinations(elecs, n_members)
+
         for group in combs_iter:
-            
+
             if ordered:
                 # use lists to store
-                seq_groups_dict.setdefault(group,0)
+                seq_groups_dict.setdefault(group, 0)
                 seq_groups_dict[group] += 1
             else:
                 # use sets to store
-                seq_groups_dict.setdefault(frozenset(group),0)
+                seq_groups_dict.setdefault(frozenset(group), 0)
                 seq_groups_dict[frozenset(group)] += 1
-    
-    descending_keys = sorted(seq_groups_dict, key=seq_groups_dict.get, 
-                             reverse=True)
-    
-    top_seqs = {k:seq_groups_dict[k] for k in descending_keys[:n_top]}
-    
+
+    descending_keys = sorted(seq_groups_dict, key=seq_groups_dict.get, reverse=True)
+
+    top_seqs = {k: seq_groups_dict[k] for k in descending_keys[:n_top]}
+
     return top_seqs
-        
+
+
 def compute_top_lead_elec(seqs):
     """Given an array of electrode sequences, return the most frequent lead 
     electrode.
@@ -65,9 +65,10 @@ def compute_top_lead_elec(seqs):
     Returns:
         str: most frequent leading electrode
     """
-    
-    elecs, counts = np.unique(seqs[:,0], return_counts=True)
+
+    elecs, counts = np.unique(seqs[:, 0], return_counts=True)
     return elecs[np.argmax(counts)]
+
 
 def convert_parcs(parc_str):
     """Convert a string of a list of parcels to a list of integers.
@@ -78,9 +79,10 @@ def convert_parcs(parc_str):
     Returns:
         list: list of parcel numbers (not indices)
     """
-    
-    lst_str = parc_str.strip('][').split(', ')
+
+    lst_str = parc_str.strip("][").split(", ")
     return map_func(lst_str, no_index=False)
+
 
 def convert_lobes(lobe_str):
     """Convert a string of a list of lobes to a list of strings
@@ -91,9 +93,10 @@ def convert_lobes(lobe_str):
     Returns:
         list: list of string lobe names
     """
-    
-    return lobe_str.replace("'",'').replace(' ','').strip('[]').split(',')
-    
+
+    return lobe_str.replace("'", "").replace(" ", "").strip("[]").split(",")
+
+
 def map_func(lst_str, no_index=False):
     """Map a list of strings to a list of integers
 
@@ -105,18 +108,19 @@ def map_func(lst_str, no_index=False):
     Returns:
         list: list of integers
     """
-    
+
     lst_int = []
-    
+
     for val in lst_str:
-        if val != '':
+        if val != "":
             if no_index:
                 lst_int.append(int(val))
             else:
                 # convert to int and subtract one to make an index
                 lst_int.append(int(val) - 1)
-    
+
     return lst_int
+
 
 def get_parcel_hemi(parcel, n_parcs):
     """For a given parcel number, return the hemisphere of that parcel
@@ -128,18 +132,18 @@ def get_parcel_hemi(parcel, n_parcs):
     Returns:
         str: hemisphere ("LH" or "RH")
     """
-    
+
     assert parcel in range(1, n_parcs + 1)
-    
+
     if parcel <= (n_parcs / 2):
         return "LH"
     else:
         return "RH"
-    
-def get_prediction_accuracy(engel_class, 
-                            resected_prop,
-                            resected_threshold = 0.5,
-                            sz_free=['1a']):
+
+
+def get_prediction_accuracy(
+    engel_class, resected_prop, resected_threshold=0.5, sz_free=["1a"]
+):
     """Based on the Engel class and proportion of a parcel resected, return
     the prediction accuracy (TP,TN,FP,FN).
 
@@ -154,15 +158,15 @@ def get_prediction_accuracy(engel_class,
     Returns:
         str: accuracy (TN, TP, FP, FN)
     """
-    
+
     if resected_prop >= resected_threshold:
         resected = True
     else:
         resected = False
 
     # engel class values that would exclude patient
-    no_outcome = ['no_outcome', 'deceased', 'no_resection']
-    
+    no_outcome = ["no_outcome", "deceased", "no_resection"]
+
     if engel_class in no_outcome:
         return "N/A"
     elif engel_class in sz_free:
@@ -176,6 +180,7 @@ def get_prediction_accuracy(engel_class,
         else:
             return "TN"
 
+
 def compute_elec2parc_euc(elec2parc_euc_arr, elec_idx, parc):
     """Return the Euclidean distance between an electrode index and parcel.
 
@@ -188,8 +193,9 @@ def compute_elec2parc_euc(elec2parc_euc_arr, elec_idx, parc):
     Returns:
         float: Euclidean distance between electrode and parcel
     """
-    
-    return elec2parc_euc_arr[parc-1, elec_idx]
+
+    return elec2parc_euc_arr[parc - 1, elec_idx]
+
 
 def compute_elec2parc_geo(parc2node_dict, elec2node_geo_arr, elec_idx, parc):
     """Return the geodesic distance between an electrode index and parcel.
@@ -203,11 +209,12 @@ def compute_elec2parc_geo(parc2node_dict, elec2node_geo_arr, elec_idx, parc):
 
     Returns:
         float: minimum geodesic distance between electrode and parcel
-    """ 
-    
+    """
+
     parc_nodes = parc2node_dict[parc]
-    
-    return np.min(elec2node_geo_arr[parc_nodes,elec_idx])
+
+    return np.min(elec2node_geo_arr[parc_nodes, elec_idx])
+
 
 def num2roman(num):
     """Convert a number to Roman numeral
@@ -219,7 +226,7 @@ def num2roman(num):
         str: Roman numeral
     """
 
-    roman = ''
+    roman = ""
 
     while num > 0:
         for i, r in NUM_MAP:
@@ -228,6 +235,7 @@ def num2roman(num):
                 num -= i
 
     return roman
+
 
 def roman2num(num):
     """Convert a Roman numeral to number.
@@ -238,15 +246,16 @@ def roman2num(num):
     Returns:
         int: number
     """
-    
-    roman_numerals = {'I':1, 'V':5, 'X':10}
+
+    roman_numerals = {"I": 1, "V": 5, "X": 10}
     result = 0
-    for i,c in enumerate(num):
-        if (i+1) == len(num) or roman_numerals[c] >= roman_numerals[num[i+1]]:
+    for i, c in enumerate(num):
+        if (i + 1) == len(num) or roman_numerals[c] >= roman_numerals[num[i + 1]]:
             result += roman_numerals[c]
         else:
             result -= roman_numerals[c]
     return result
+
 
 def compute_node2prop_arr(parc2prop_df, parc2node_dict, n_parcs, hemi=None):
     """Return an array of proportions explained by individual nodes for 
@@ -261,30 +270,31 @@ def compute_node2prop_arr(parc2prop_df, parc2node_dict, n_parcs, hemi=None):
     Returns:
         tuple: np.array of proportions at every node, hemisphere string
     """
-    
+
     if hemi == None:
         # find hemisphere of maximal parcel
-        if parc2prop_df['propExplanatorySpikes'].idxmax() < (len(parc2prop_df) // 2):
+        if parc2prop_df["propExplanatorySpikes"].idxmax() < (len(parc2prop_df) // 2):
             hemi = "LH"
-            parc_range = range(1,(n_parcs//2)+1)
+            parc_range = range(1, (n_parcs // 2) + 1)
         else:
             hemi = "RH"
-            parc_range = range((n_parcs//2)+1,n_parcs+1)
+            parc_range = range((n_parcs // 2) + 1, n_parcs + 1)
 
     # initialize empty proportion array
     node2prop_arr = np.zeros(N_NODES)
 
     # update node2parc proportion at each parcel
     for parc in parc_range:
-        
+
         # get proportion for particular parcel
         parc_slice = parc2prop_df[parc2prop_df.index == parc]
-        proportion = parc_slice['propExplanatorySpikes'].iloc[0]
-        
+        proportion = parc_slice["propExplanatorySpikes"].iloc[0]
+
         # set all nodes of particular parcel to correct proportion
         node2prop_arr[parc2node_dict[parc]] = proportion
-    
+
     return node2prop_arr, hemi.upper()
+
 
 def retrieve_lead_counts(elec_names, seqs, delays, lead_times=[100]):
     """Create a dataframe containing the frequency for which each electrode
@@ -302,49 +312,50 @@ def retrieve_lead_counts(elec_names, seqs, delays, lead_times=[100]):
             will create a column in which elecs within the first 20 ms are 
             counted. Defaults to [100].
     """
-    
+
     # set default based on number of output values
-    default_val = [0 for _ in range(len(lead_times)+1)]
-    
+    default_val = [0 for _ in range(len(lead_times) + 1)]
+
     # fill dictionary with default values
     out_dict = {}
     for elec in elec_names:
         out_dict.setdefault(elec, default_val.copy())
-    
+
     # iterate through sequences
     for i in range(seqs.shape[0]):
-        
+
         # select all filled positions
-        row = seqs[i,:]
+        row = seqs[i, :]
         seq_elecs = row[row != "nan"]
-        
+
         # get lead electrode
         leader = seq_elecs[0]
-        
+
         # increment lead electrode frequency in out_dict
         out_dict[leader][0] += 1
-        
+
         n_elecs = seq_elecs.size
-        
+
         for j in range(n_elecs):
-            
+
             elec = seq_elecs[j]
-            
-            #increment electrode frequencies for within xx ms columns
-            lag = delays[i,j]
+
+            # increment electrode frequencies for within xx ms columns
+            lag = delays[i, j]
             for idx, time in enumerate(lead_times):
                 if lag < time:
-                    out_dict[elec][idx+1] += 1
-    
+                    out_dict[elec][idx + 1] += 1
+
     # initialize names of out columns
-    out_cols = ['Leader']
+    out_cols = ["Leader"]
     for time in lead_times:
-        out_cols.append(f'Within {time}ms')
-    
-    out_df = pd.DataFrame.from_dict(out_dict, orient='index', columns=out_cols)
+        out_cols.append(f"Within {time}ms")
+
+    out_df = pd.DataFrame.from_dict(out_dict, orient="index", columns=out_cols)
     out_df.sort_values(out_cols, ascending=False, inplace=True)
-    
+
     return out_df
+
 
 def compute_mean_seq_length(seqs):
     """Compute the mean sequence length.
@@ -355,8 +366,9 @@ def compute_mean_seq_length(seqs):
     Returns:
         float: mean sequence length
     """
-    
-    return seqs[seqs != 'nan'].size / seqs.shape[0]
+
+    return seqs[seqs != "nan"].size / seqs.shape[0]
+
 
 def compute_mean_similarity(similarity_arr):
     """Compute mean sequence similarity.
@@ -366,6 +378,7 @@ def compute_mean_similarity(similarity_arr):
     """
 
     return np.mean(similarity_arr)
+
 
 def compute_weighted_similarity_length(similarity_arr, seqs):
     """Compute metric combining similarity of sequences and mean length. My
@@ -379,11 +392,12 @@ def compute_weighted_similarity_length(similarity_arr, seqs):
     Returns:
         float: mean similarity weighted by mean length
     """
-    
+
     mean_similarity = compute_mean_similarity(similarity_arr)
     mean_length = compute_mean_seq_length(seqs)
-    
+
     return mean_similarity * mean_length
+
 
 def retrieve_delays(delays, seq_idxs, include_zero=False):
     """Return array of delay times for sequence indices of interest. Hypothesis
@@ -400,15 +414,16 @@ def retrieve_delays(delays, seq_idxs, include_zero=False):
     Returns:
         np.array: array of lag times for indexed sequences
     """
-    
+
     indexed_delays = delays[seq_idxs]
-    
+
     if include_zero:
-        mask = (indexed_delays >= 0)
+        mask = indexed_delays >= 0
     else:
-        mask = (indexed_delays > 0)
-    
+        mask = indexed_delays > 0
+
     return indexed_delays[mask]
+
 
 def output_lst_of_lsts(lst_of_lsts, my_dtype=float):
     """Convert a list of lists into numpy array.
@@ -422,16 +437,17 @@ def output_lst_of_lsts(lst_of_lsts, my_dtype=float):
         np.array: final array with np.NaN filled in empty spaces
     """
 
-    max_length = 1 # initialize max number of sources for any sequence
+    max_length = 1  # initialize max number of sources for any sequence
     for lst in lst_of_lsts:
         if len(lst) > max_length:
             max_length = len(lst)
 
-    out_array = np.full((len(lst_of_lsts),max_length), np.NaN, dtype=my_dtype)
+    out_array = np.full((len(lst_of_lsts), max_length), np.NaN, dtype=my_dtype)
     for i, lst in enumerate(lst_of_lsts):
-        out_array[i,0:len(lst)] = lst
+        out_array[i, 0 : len(lst)] = lst
 
     return out_array
+
 
 def reorient_coord(coord_arr, in_orient, out_orient):
     """
@@ -450,11 +466,7 @@ def reorient_coord(coord_arr, in_orient, out_orient):
         orientation specified in "out_orient"
     """
     # define axis codes
-    axis_codes_dict = {
-        0: ['L','R'],
-        1: ['A','P'],
-        2: ['I','S']
-    }
+    axis_codes_dict = {0: ["L", "R"], 1: ["A", "P"], 2: ["I", "S"]}
 
     change_axis_dict = dict(zip(range(3), repeat(True)))
     for idx in range(3):
@@ -465,9 +477,11 @@ def reorient_coord(coord_arr, in_orient, out_orient):
 
     # change axes that need to be changed
     for axis, change_bool in change_axis_dict.items():
-        if change_bool: coord_arr[:,axis] = -coord_arr[:,axis]
+        if change_bool:
+            coord_arr[:, axis] = -coord_arr[:, axis]
 
     return coord_arr
+
 
 def convert_list_to_dict(lst):
     """Convert a list of source parcel lists to a dictionary with the 
@@ -485,10 +499,11 @@ def convert_list_to_dict(lst):
 
     for parcel_list in lst:
         for parcel in parcel_list:
-            out_dict.setdefault(parcel,0)
+            out_dict.setdefault(parcel, 0)
             out_dict[parcel] += 1
 
     return out_dict
+
 
 def output_normalized_counts(num_counts, hemi_dict, n_parcs):
     """Convert source count dictionary to df for saving as csv.
@@ -504,13 +519,15 @@ def output_normalized_counts(num_counts, hemi_dict, n_parcs):
     """
 
     normalized_lst = [(count / num_counts) for count in hemi_dict.values()]
-    output_df = pd.DataFrame({"parcNumber":hemi_dict.keys(),
-                              "propExplanatorySpikes":normalized_lst})
+    output_df = pd.DataFrame(
+        {"parcNumber": hemi_dict.keys(), "propExplanatorySpikes": normalized_lst}
+    )
     output_df.set_index("parcNumber", inplace=True)
     output_df.sort_index(inplace=True)
-    output_df = output_df.reindex(list(range(1,n_parcs+1)),fill_value=0)
+    output_df = output_df.reindex(list(range(1, n_parcs + 1)), fill_value=0)
 
     return output_df
+
 
 def convert_geo_arrays(Subj, minGeo, maxGeo):
     """Convert n_node x n_elec geodesic arrays to n_parc x n_elec.
@@ -523,21 +540,26 @@ def convert_geo_arrays(Subj, minGeo, maxGeo):
     Returns:
         tuple: parc_minGeo, parc_maxGeo (np.arrays with shape n_parc x n_elec)
     """
-    
-    parc_minGeo = np.full((Subj.parcs,minGeo.shape[1]),np.NaN)
-    parc_maxGeo = np.full((Subj.parcs,minGeo.shape[1]),np.NaN)
+
+    parc_minGeo = np.full((Subj.parcs, minGeo.shape[1]), np.NaN)
+    parc_maxGeo = np.full((Subj.parcs, minGeo.shape[1]), np.NaN)
 
     for parc_idx in range(Subj.parcs):
-        parc_minGeo[parc_idx,:] = np.nanmin(minGeo[Subj.parc2node_dict[parc_idx+1]], axis=0)
-        parc_maxGeo[parc_idx,:] = np.nanmax(maxGeo[Subj.parc2node_dict[parc_idx+1]], axis=0)
-    
+        parc_minGeo[parc_idx, :] = np.nanmin(
+            minGeo[Subj.parc2node_dict[parc_idx + 1]], axis=0
+        )
+        parc_maxGeo[parc_idx, :] = np.nanmax(
+            maxGeo[Subj.parc2node_dict[parc_idx + 1]], axis=0
+        )
+
     hemis = np.array(list(Subj.elec2hemi_dict.values()))
 
     # remove values for electrodes whose nodes were in other hemisphere
-    parc_minGeo[Subj.parcs//2:, hemis=="LH"] = np.NaN
-    parc_minGeo[:Subj.parcs//2, hemis=="RH"] = np.NaN
-    
+    parc_minGeo[Subj.parcs // 2 :, hemis == "LH"] = np.NaN
+    parc_minGeo[: Subj.parcs // 2, hemis == "RH"] = np.NaN
+
     return parc_minGeo, parc_maxGeo
+
 
 def hms(seconds):
     """Convert seconds to hours, minutes, and seconds.
@@ -548,11 +570,12 @@ def hms(seconds):
     Returns:
         str: {hours}h:{minutes}m:seconds{s}
     """
-    
+
     h = seconds // 3600
     m = seconds % 3600 // 60
     s = seconds % 3600 % 60
-    return f'{h:02d}h:{m:02d}m:{s:02d}s'
+    return f"{h:02d}h:{m:02d}m:{s:02d}s"
+
 
 def print_progress_update(i, start_time, n_seqs):
     """Print out progress update on source localization.
@@ -567,10 +590,14 @@ def print_progress_update(i, start_time, n_seqs):
     time_now = time()
     time_elapsed = time_now - start_time
     str_time_elapsed = hms(round(time_elapsed))
-    time_remaining = (time_elapsed/i)*(n_seqs-i)
+    time_remaining = (time_elapsed / i) * (n_seqs - i)
     str_time_left = hms(round(time_remaining))
     print(Colors.YELLOW, f"#{i}/{n_seqs} Sequences Complete:", Colors.END)
-    print(Colors.BLUE,
-          (f"Time Elapsed = {str_time_elapsed} ... "
-           f"Estimated Time Remaining = {str_time_left}"),
-          Colors.END)
+    print(
+        Colors.BLUE,
+        (
+            f"Time Elapsed = {str_time_elapsed} ... "
+            f"Estimated Time Remaining = {str_time_left}"
+        ),
+        Colors.END,
+    )

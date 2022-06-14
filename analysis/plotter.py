@@ -3,6 +3,7 @@ import shlex
 import subprocess
 import tempfile
 import warnings
+
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 from nilearn import plotting
@@ -15,7 +16,8 @@ import seaborn as sns
 from ied_repo.utils.helpers import *
 from ied_repo.utils.subject import Subject
 
-rc('font', family='TimesNewRoman')
+rc("font", family="TimesNewRoman")
+
 
 def plot_prop_explained_histogram(parc2prop, hemi, n_parcs=600):
     """Return a Figure object displaying the proportion of sequences explained 
@@ -33,48 +35,54 @@ def plot_prop_explained_histogram(parc2prop, hemi, n_parcs=600):
     """
 
     # change plot style
-    sns.set_theme(font_scale=0.8, rc={'xtick.major.size':4,
-                                      'xtick.major.width':0.5,
-                                      'xtick.bottom':True,
-                                      'xtick.minor.size':2,
-                                      'xtick.minor.width':0.5,
-                                      'xtick.minor.bottom':True})
+    sns.set_theme(
+        font_scale=0.8,
+        rc={
+            "xtick.major.size": 4,
+            "xtick.major.width": 0.5,
+            "xtick.bottom": True,
+            "xtick.minor.size": 2,
+            "xtick.minor.width": 0.5,
+            "xtick.minor.bottom": True,
+        },
+    )
 
     # create figure and get axis
-    fig = plt.figure(figsize=(10,5))
+    fig = plt.figure(figsize=(10, 5))
     ax = plt.gca()
-    
+
     # plot data using seaborn
-    sns.barplot(data=parc2prop, x=parc2prop.index, 
-                y="propExplanatorySpikes", ax=ax)
-    
+    sns.barplot(data=parc2prop, x=parc2prop.index, y="propExplanatorySpikes", ax=ax)
+
     # modify figure
     ax.set_title("Proportion of Sequences Explained by Schaefer Parcel\n")
     ax.set_xlabel("Parcel Number")
     ax.set_ylabel("Proportion of Sequences Explained")
     ax.set_ylim((0, 1))
-    ax.xaxis.set_major_locator(MultipleLocator(5), )
-    ax.xaxis.set_major_formatter('{x:.0f}')
+    ax.xaxis.set_major_locator(MultipleLocator(5),)
+    ax.xaxis.set_major_formatter("{x:.0f}")
     ax.xaxis.set_minor_locator(MultipleLocator(1))
     plt.setp(ax.get_xticklabels(), fontsize=6)
 
     if hemi.upper() == "RH":
-        plt.xlim((int(n_parcs/2)-1,n_parcs+1))
+        plt.xlim((int(n_parcs / 2) - 1, n_parcs + 1))
     else:
-        plt.xlim((-1,int(n_parcs/2)+1))
-    
+        plt.xlim((-1, int(n_parcs / 2) + 1))
+
     plt.close(fig)
-        
+
     return fig
 
-def plot_source_localization(Subj, 
-                             surfs=['pial','inf_200'],
-                             cmap='Spectral_r',
-                             dist=45,
-                             only_geo=False,
-                             only_wm=False,
-                             lead_elec=False
-                            ):
+
+def plot_source_localization(
+    Subj,
+    surfs=["pial", "inf_200"],
+    cmap="Spectral_r",
+    dist=45,
+    only_geo=False,
+    only_wm=False,
+    lead_elec=False,
+):
     """Run nilearn.plotting.view_surf on a parcel to value df.
 
     Args:
@@ -101,10 +109,10 @@ def plot_source_localization(Subj,
     assert cmap in plt.colormaps()
     assert isinstance(Subj, Subject)
     assert (only_geo + only_wm + lead_elec) <= 1
-    
+
     # load directory names
-    surf_dir = Subj.dirs['surf']
-    general_dir = Subj.dirs['general']
+    surf_dir = Subj.dirs["surf"]
+    general_dir = Subj.dirs["general"]
 
     master_views = {}
 
@@ -113,15 +121,13 @@ def plot_source_localization(Subj,
         if lead_elec:
             parc2prop = Subj.compute_lead_elec_parc2prop_df(cluster=n_cluster)
         else:
-            parc2prop = Subj.fetch_normalized_parc2prop_df(cluster=n_cluster,
-                                                           dist=dist, 
-                                                           only_geo=only_geo,
-                                                           only_wm=only_wm
-                                                        )
+            parc2prop = Subj.fetch_normalized_parc2prop_df(
+                cluster=n_cluster, dist=dist, only_geo=only_geo, only_wm=only_wm
+            )
 
-        node2prop_arr, hemi = compute_node2prop_arr(parc2prop, 
-                                                    Subj.parc2node_dict,
-                                                    Subj.parcs)
+        node2prop_arr, hemi = compute_node2prop_arr(
+            parc2prop, Subj.parc2node_dict, Subj.parcs
+        )
 
         # load array of sulci contours
         sulc_file = general_dir / f"std.141.{hemi.lower()}.sulc.1D.dset"
@@ -129,28 +135,34 @@ def plot_source_localization(Subj,
 
         # initialize dictionary to store views
         views = {}
-        
+
         # iterate through surfs
         for surf in surfs:
 
             surf_file = surf_dir / f"std.141.{hemi.lower()}.{surf}.gii"
 
             # plot results
-            view = plotting.view_surf(str(surf_file), 
-                                    node2prop_arr,
-                                    cmap=cmap, symmetric_cmap=False,
-                                    bg_map=sulc_array, 
-                                    threshold=0.001, vmax=1)
-            
+            view = plotting.view_surf(
+                str(surf_file),
+                node2prop_arr,
+                cmap=cmap,
+                symmetric_cmap=False,
+                bg_map=sulc_array,
+                threshold=0.001,
+                vmax=1,
+            )
+
             # add to dictionary
             views[surf] = view
-            
+
         master_views[n_cluster] = views
-        
+
     return master_views
 
-def barplot_annotate_brackets(num1, num2, data, center, height, yerr=None, 
-                              dh=.05, barh=.05, fs=16, maxasterix=3):
+
+def barplot_annotate_brackets(
+    num1, num2, data, center, height, yerr=None, dh=0.05, barh=0.05, fs=16, maxasterix=3
+):
     """ 
     Annotate barplot with p-values.
 
@@ -173,19 +185,21 @@ def barplot_annotate_brackets(num1, num2, data, center, height, yerr=None,
         # ** is p < 0.01
         # *** is p < 0.001
         # etc.
-        text = ''
-        p = .05
+        text = ""
+        p = 0.05
 
         while data < p:
-            text += '*'
-            if p == .05: p = 0.01
-            elif p == 0.01: p = 0.001
+            text += "*"
+            if p == 0.05:
+                p = 0.01
+            elif p == 0.01:
+                p = 0.001
 
             if maxasterix and len(text) == maxasterix:
                 break
 
         if len(text) == 0:
-            text = 'n. s.'
+            text = "n. s."
 
     lx, ly = center[num1], height[num1]
     rx, ry = center[num2], height[num2]
@@ -195,25 +209,27 @@ def barplot_annotate_brackets(num1, num2, data, center, height, yerr=None,
         ry += yerr[num2]
 
     ax_y0, ax_y1 = plt.gca().get_ylim()
-    dh *= (ax_y1 - ax_y0)
-    barh *= (ax_y1 - ax_y0)
+    dh *= ax_y1 - ax_y0
+    barh *= ax_y1 - ax_y0
 
     y = max(ly, ry) + dh
 
     barx = [lx, lx, rx, rx]
-    bary = [y, y+barh, y+barh, y]
-    mid = ((lx+rx)/2, y+barh)
+    bary = [y, y + barh, y + barh, y]
+    mid = ((lx + rx) / 2, y + barh)
 
-    plt.plot(barx, bary, c='black')
+    plt.plot(barx, bary, c="black")
 
-    kwargs = dict(ha='center', va='bottom')
+    kwargs = dict(ha="center", va="bottom")
     if fs is not None:
-        kwargs['fontsize'] = fs
+        kwargs["fontsize"] = fs
 
     plt.text(*mid, text, **kwargs)
-    
-def get_electrode_node_arr(Subj, elecs=[], lags=[], 
-                           func=(lambda x: ((100 - x)/100 * 2))):
+
+
+def get_electrode_node_arr(
+    Subj, elecs=[], lags=[], func=(lambda x: ((100 - x) / 100 * 2))
+):
     """Create array that can be saved out as .node file.
 
     Args:
@@ -229,44 +245,45 @@ def get_electrode_node_arr(Subj, elecs=[], lags=[],
             coordinates; last 2 columns are color intensity and radius, 
             respectively
     """
-    
+
     if len(elecs) > 0:
         is_sequence = True
     else:
         is_sequence = False
-    
-    rai_coords_file = Subj.dirs['align_elec_alt'] / "electrodes.COORDS.ALT.RAI.1D"
-    all_rai_coords = np.loadtxt(rai_coords_file)[:,:-1]
+
+    rai_coords_file = Subj.dirs["align_elec_alt"] / "electrodes.COORDS.ALT.RAI.1D"
+    all_rai_coords = np.loadtxt(rai_coords_file)[:, :-1]
 
     if is_sequence:
         elec_idxs = np.array([Subj.get_elec_idx(elec) for elec in elecs])
-        rai_coords = all_rai_coords[elec_idxs,:]
+        rai_coords = all_rai_coords[elec_idxs, :]
     else:
         # get all electrodes in gray matter
-        gm_elec_file = Subj.dirs['align_elec_alt'] / "electrodes.LABELS.GM.1D"
+        gm_elec_file = Subj.dirs["align_elec_alt"] / "electrodes.LABELS.GM.1D"
         gm_elec_nums = np.loadtxt(gm_elec_file, usecols=1, dtype=int)[1:] - 1
         rai_coords = all_rai_coords[gm_elec_nums]
-    
+
     # reorient to LPI orientation
-    lpi_coords = reorient_coord(rai_coords, 'RAI', 'LPI')
+    lpi_coords = reorient_coord(rai_coords, "RAI", "LPI")
 
     # fill intensity and radius parameters to new columns
     if is_sequence:
-        intensity = np.array(lags)[:,np.newaxis] + 1
-        
+        intensity = np.array(lags)[:, np.newaxis] + 1
+
         # convert radii using provided function; default is range 0 to 2
         # normalized based on lag time
         radii_lst = [func(lag) for lag in lags]
-        radii = np.array(radii_lst)[:,np.newaxis]
-        
+        radii = np.array(radii_lst)[:, np.newaxis]
+
         new_cols = np.hstack((intensity, radii))
     else:
-        new_cols = np.tile(np.array([1,0.5]), (lpi_coords.shape[0], 1))
-    
+        new_cols = np.tile(np.array([1, 0.5]), (lpi_coords.shape[0], 1))
+
     # concatenate to electrode coordinates
     node_arr = np.concatenate([lpi_coords, new_cols], axis=1)
 
     return node_arr
+
 
 def array_to_niml(array, odir, fname):
     """Create a niml.dset file at {odir / fname} using array of shape 
@@ -277,32 +294,35 @@ def array_to_niml(array, odir, fname):
         odir (pathlib.PosixPath): out directory
         fname (str): fname (excluding niml.dset)
     """
-    
+
     # array must contain the same number of values as std.141 mesh
     assert np.size(array) == 198812
-    
+
     # ensure that array is a column vector
     if array.ndim == 1:
-        array = array[:,np.newaxis]
-    
+        array = array[:, np.newaxis]
+
     full_path = odir / f"{fname}.niml.dset"
-    
+
     # if file exists already, overwrite with updated version
     full_path.unlink(missing_ok=True)
-    
+
     # if directory does not exist, make directory and all parents
     odir.mkdir(parents=True, exist_ok=True)
-    
+
     # set-up temporary directory
     with tempfile.TemporaryDirectory() as tempdir:
         # save out_1D file
         temp_file = path.join(tempdir, f"temp.1D")
-        np.savetxt(temp_file, X=array, fmt='%f')
+        np.savetxt(temp_file, X=array, fmt="%f")
 
         # run AFNI ConvertDset command to create niml.dset file
-        convert_cmd = shlex.split(f'ConvertDset -o_niml -input {temp_file} '
-                                  f'-add_node_index -prefix {full_path}')
+        convert_cmd = shlex.split(
+            f"ConvertDset -o_niml -input {temp_file} "
+            f"-add_node_index -prefix {full_path}"
+        )
         subprocess.run(convert_cmd)
+
 
 def create_topo_arr(Subj, hemi):
     """Create an array of nodes for all triangle vertices in std.141.mesh of
@@ -316,22 +336,24 @@ def create_topo_arr(Subj, hemi):
         np.array: array of shape (n_nodes, 3) where each row represents one 
             triangle and each column represents a node at one vertex.
     """
-    
-    surf_path = Subj.dirs['surf'] / f"std.141.{hemi.lower()}.pial.gii"
+
+    surf_path = Subj.dirs["surf"] / f"std.141.{hemi.lower()}.pial.gii"
 
     # get names of out files
-    coord_path = Subj.dirs['surf'] / "pial.1D.coord"
-    topo_path  = Subj.dirs['surf'] / "pial.1D.topo"
+    coord_path = Subj.dirs["surf"] / "pial.1D.coord"
+    topo_path = Subj.dirs["surf"] / "pial.1D.topo"
 
     # run AFNI ConvertSurface to get topography
-    shell_cmd = shlex.split(f"ConvertSurface -i_gii {surf_path} -o_vec "
-                            f"{coord_path} {topo_path}")
+    shell_cmd = shlex.split(
+        f"ConvertSurface -i_gii {surf_path} -o_vec " f"{coord_path} {topo_path}"
+    )
     subprocess.run(shell_cmd, stdout=subprocess.DEVNULL)
 
-    coord_path.unlink() # delete coordinates file that is unused
-    topo_arr = np.loadtxt(topo_path, delimiter=' ', dtype=int)
-    
+    coord_path.unlink()  # delete coordinates file that is unused
+    topo_arr = np.loadtxt(topo_path, delimiter=" ", dtype=int)
+
     return topo_arr
+
 
 def get_border_nodes(Subj, parcel):
     """Create (n_nodes,1) array with value 1 for every node on the border of 
@@ -345,36 +367,36 @@ def get_border_nodes(Subj, parcel):
         np.array: array with 1's for every node on border of parcel, 
             shape (n_nodes,1). Use array_to_niml() to convert to niml.dset
     """
-    
+
     hemi = get_parcel_hemi(parcel, Subj.parcs)
-    topo_path = Subj.dirs['surf'] / "pial.1D.topo"
-    
+    topo_path = Subj.dirs["surf"] / "pial.1D.topo"
+
     if not topo_path.exists():
         topo_node_arr = create_topo_arr(Subj, hemi)
     else:
-        topo_node_arr = np.loadtxt(topo_path, delimiter=' ', dtype=int)
-    
+        topo_node_arr = np.loadtxt(topo_path, delimiter=" ", dtype=int)
+
     # convert nodes to parcels
     topo_parc_arr = np.vectorize(Subj.node2parc_hemi_dict[hemi].get)(topo_node_arr)
-    
+
     # get all triangles that have at least 2 unique parcels
     border_idx = ~np.logical_and(
-        topo_parc_arr[:,0] == topo_parc_arr[:,1], 
-        topo_parc_arr[:,0] == topo_parc_arr[:,2]
+        topo_parc_arr[:, 0] == topo_parc_arr[:, 1],
+        topo_parc_arr[:, 0] == topo_parc_arr[:, 2],
     )
-    
+
     # get rows of topo_arrs that are on the border
-    border_topo_parc_arr = topo_parc_arr[border_idx,:]
-    border_topo_node_arr = topo_node_arr[border_idx,:]
-    
+    border_topo_parc_arr = topo_parc_arr[border_idx, :]
+    border_topo_node_arr = topo_node_arr[border_idx, :]
+
     # constrain parcel to range [1,n_parcs/2]
     if parcel > (Subj.parcs // 2):
-        parcel -= (Subj.parcs // 2)
-    
+        parcel -= Subj.parcs // 2
+
     # retrieve all nodes of given parcel in border rows
-    nodes = np.unique(border_topo_node_arr[np.isin(border_topo_parc_arr,parcel)])
-    
+    nodes = np.unique(border_topo_node_arr[np.isin(border_topo_parc_arr, parcel)])
+
     nodes_arr = np.zeros(198812)
     nodes_arr[nodes] = 1
-    
+
     return nodes_arr

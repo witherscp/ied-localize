@@ -11,12 +11,21 @@ import pandas as pd
 from .constants import *
 from .helpers import *
 
-filterwarnings(action="ignore", message='All-NaN slice encountered')
+filterwarnings(action="ignore", message="All-NaN slice encountered")
+
 
 class Subject:
-
-    def __init__(self, subj, n_parcs=600, n_networks=17, max_length=10,
-                 dist=45, use_weighted=True, use_best=True, in_progress=False):
+    def __init__(
+        self,
+        subj,
+        n_parcs=600,
+        n_networks=17,
+        max_length=10,
+        dist=45,
+        use_weighted=True,
+        use_best=True,
+        in_progress=False,
+    ):
         """Create an instance of Subject for analysis of IED spike data
 
         Args:
@@ -46,7 +55,7 @@ class Subject:
 
         # set subject-specific directories
         self.dirs = {
-            k.lower()[:-4]: (v / self.subj) for k,v in data_directories.items()
+            k.lower()[:-4]: (v / self.subj) for k, v in data_directories.items()
         }
         self._update_ied_subdirs()
         self._update_mri_subdirs()
@@ -58,13 +67,13 @@ class Subject:
         self.elec2hemi_dict = self._fetch_elec2hemi_dict()
         self.parc2node_dict = self._fetch_parc2node_dict()
         self.node2parc_hemi_dict = self._fetch_node2parc_hemi_dict()
-        
+
         self.parc_minEuclidean_byElec = self._fetch_parc_minEuclidean_byElec()
         self.elec_euc_arr = self._fetch_elec_euc_arr()
 
         # update attributes
         self._update_engel_class()
-        if self.engel_class not in ("no_resection","no_outcome","deceased"):
+        if self.engel_class not in ("no_resection", "no_outcome", "deceased"):
             self.node2rsxn_df_dict = self._fetch_node2rsxn_df_dict()
         self._update_num_clusters()
         self._update_cluster_num_sequences()
@@ -73,31 +82,35 @@ class Subject:
         # if localized, update additional attributes
         if not in_progress:
             self._update_cluster_types()
-            self._update_source_parcels(dist=dist, 
-                                        use_weighted=use_weighted,
-                                        use_best=use_best)
+            self._update_source_parcels(
+                dist=dist, use_weighted=use_weighted, use_best=use_best
+            )
 
     def _update_ied_subdirs(self):
         """Add IED subdirectories."""
 
         dir_name = f"Schaefer_{self.parcs}P_{self.networks}N"
 
-        for val, dir in [('seqs', 'sequence_classification'),
-                         ('raw_fc', 'raw_fc'),
-                         ('sc', f'sc/{dir_name}'),
-                         ('source_loc', f'source_localization/{dir_name}')]:
+        for val, dir in [
+            ("seqs", "sequence_classification"),
+            ("raw_fc", "raw_fc"),
+            ("sc", f"sc/{dir_name}"),
+            ("source_loc", f"source_localization/{dir_name}"),
+        ]:
 
-            self.dirs[val] = self.dirs['ied'] / dir
+            self.dirs[val] = self.dirs["ied"] / dir
 
     def _update_mri_subdirs(self):
         """Add MRI subdirectories."""
 
-        for val, dir in [('surf', 'surf/xhemi/std141/orig'),
-                         ('general', 'surf/xhemi/std141/orig/general'),
-                         ('align_elec_alt', 'icEEG/align_elec_alt'),
-                         ('docs', 'icEEG/__docs')]:
+        for val, dir in [
+            ("surf", "surf/xhemi/std141/orig"),
+            ("general", "surf/xhemi/std141/orig/general"),
+            ("align_elec_alt", "icEEG/align_elec_alt"),
+            ("docs", "icEEG/__docs"),
+        ]:
 
-            self.dirs[val] = self.dirs['mri'] / dir
+            self.dirs[val] = self.dirs["mri"] / dir
 
     def _fetch_elec_euc_arr(self):
         """Fetch elec_euc_arr to store as self.elec_euc_arr.
@@ -106,10 +119,10 @@ class Subject:
             np.array: n_elec x n_elec array of Euclidean distances
         """
 
-        fpath = self.dirs['sc'] / "elec_euc_withinHemi.csv"
+        fpath = self.dirs["sc"] / "elec_euc_withinHemi.csv"
         arr = np.loadtxt(fpath, dtype=float)
         arr[np.diag_indices_from(arr)] = np.NaN
-        
+
         return arr
 
     def fetch_sequences(self, cluster=None, all_elecs=False):
@@ -128,29 +141,31 @@ class Subject:
 
         assert isinstance(cluster, (int, type(None)))
 
-        suffix = ''
+        suffix = ""
         if isinstance(cluster, int):
             suffix = f"_cluster{cluster}"
 
-        noparc_str = '_withParc'
+        noparc_str = "_withParc"
         if all_elecs:
-            noparc_str = ''
+            noparc_str = ""
 
-        seqs_file = self.dirs['seqs'] / (f"elecSequences{noparc_str}_max"
-                                         f"{self.seq_len}{suffix}.csv")
-        
+        seqs_file = self.dirs["seqs"] / (
+            f"elecSequences{noparc_str}_max" f"{self.seq_len}{suffix}.csv"
+        )
+
         if not seqs_file.exists():
             # remove all electrodes without parcels from sequences
-            self._remove_noparcel_elecs(cluster) 
-        
+            self._remove_noparcel_elecs(cluster)
+
         seqs = np.loadtxt(seqs_file, dtype=str, delimiter=",")
-            
-        delays_file = self.dirs['seqs'] / (f"delaySequences{noparc_str}_max"
-                                           f"{self.seq_len}{suffix}.csv")
-        delays = np.loadtxt(delays_file, dtype=float,delimiter=",")
+
+        delays_file = self.dirs["seqs"] / (
+            f"delaySequences{noparc_str}_max" f"{self.seq_len}{suffix}.csv"
+        )
+        delays = np.loadtxt(delays_file, dtype=float, delimiter=",")
 
         return seqs, delays
-    
+
     def _remove_noparcel_elecs(self, cluster):
         """Save sequences without elecs that have no parcels because they were 
         not used for source localization and should be ignored for analysis.
@@ -158,47 +173,51 @@ class Subject:
         Args:
             cluster (int): cluster number
         """
-        
-        suffix = ''
+
+        suffix = ""
         if isinstance(cluster, int):
             suffix = f"_cluster{cluster}"
-        
-        seqs_file = self.dirs['seqs'] / (f"elecSequences_max{self.seq_len}"
-                                         f"{suffix}.csv")
+
+        seqs_file = self.dirs["seqs"] / (
+            f"elecSequences_max{self.seq_len}" f"{suffix}.csv"
+        )
         seqs = np.loadtxt(seqs_file, dtype=str, delimiter=",")
-        
-        delays_file = self.dirs['seqs'] / (f"delaySequences_max{self.seq_len}"
-                                           f"{suffix}.csv")
-        delays = np.loadtxt(delays_file, dtype=float,delimiter=",")
-        
+
+        delays_file = self.dirs["seqs"] / (
+            f"delaySequences_max{self.seq_len}" f"{suffix}.csv"
+        )
+        delays = np.loadtxt(delays_file, dtype=float, delimiter=",")
+
         new_seqs = []
         new_delays = []
 
         for i in range(seqs.shape[0]):
-            
-            new_seqs.append([]) # make new list in new_seqs and new_delays
+
+            new_seqs.append([])  # make new list in new_seqs and new_delays
             new_delays.append([])
-            
-            row = seqs[i,:]
+
+            row = seqs[i, :]
             elecs = [elec for elec in row if elec != "nan"]
             for j, elec in enumerate(elecs):
                 parcs = self.elec2parc_dict[elec]
                 if len(parcs) > 0:
                     new_seqs[-1].append(elec)
-                    new_delays[-1].append(delays[i,j])
-            
+                    new_delays[-1].append(delays[i, j])
+
             new_delays[-1] = [lag - new_delays[-1][0] for lag in new_delays[-1]]
-        
+
         # convert new_seqs and new_delays to numpy arrays
         new_seqs_arr = output_lst_of_lsts(new_seqs, my_dtype=object)
         new_delays_arr = output_lst_of_lsts(new_delays)
-        
-        out_fpath = self.dirs['seqs'] / ("elecSequences_withParc_max"
-                                         f"{self.seq_len}{suffix}.csv")
+
+        out_fpath = self.dirs["seqs"] / (
+            "elecSequences_withParc_max" f"{self.seq_len}{suffix}.csv"
+        )
         np.savetxt(out_fpath, X=new_seqs_arr, delimiter=",", fmt="%s")
-        
-        out_fpath = self.dirs['seqs'] / ("delaySequences_withParc_max"
-                                         f"{self.seq_len}{suffix}.csv")
+
+        out_fpath = self.dirs["seqs"] / (
+            "delaySequences_withParc_max" f"{self.seq_len}{suffix}.csv"
+        )
         np.savetxt(out_fpath, X=new_delays_arr, delimiter=",")
 
     def _fetch_parc_minEuclidean_byElec(self):
@@ -209,8 +228,8 @@ class Subject:
             np.array: array Euclidean distances with shape (n_parcs, n_elecs)
         """
 
-        fpath = self.dirs['sc'] / "parc_minEuclidean_byElec.csv"
-        return np.loadtxt(fpath, delimiter=',', dtype=float)
+        fpath = self.dirs["sc"] / "parc_minEuclidean_byElec.csv"
+        return np.loadtxt(fpath, delimiter=",", dtype=float)
 
     def _fetch_parc2node_dict(self):
         """Fetch parcel to node dictionary.
@@ -223,22 +242,25 @@ class Subject:
 
         for hemi, use_idx in [("LH", 1), ("RH", 2)]:
 
-            fpath = self.dirs['sc'] / "node_to_parc.csv"
-            df = pd.read_csv(fpath, 
-                             usecols=[0,use_idx], 
-                             names=['node', 'parcel'],
-                             skiprows=1, 
-                             dtype=int)
-            
+            fpath = self.dirs["sc"] / "node_to_parc.csv"
+            df = pd.read_csv(
+                fpath,
+                usecols=[0, use_idx],
+                names=["node", "parcel"],
+                skiprows=1,
+                dtype=int,
+            )
+
             modifier = 0
-            if hemi == "RH": modifier = self.parcs // 2
-            
-            for parc in range(1,(self.parcs // 2) + 1):
-                node_arr = df.loc[df.parcel == parc, 'node'].to_numpy()
+            if hemi == "RH":
+                modifier = self.parcs // 2
+
+            for parc in range(1, (self.parcs // 2) + 1):
+                node_arr = df.loc[df.parcel == parc, "node"].to_numpy()
                 parc2node_dict[parc + modifier] = node_arr
 
         return parc2node_dict
-    
+
     def _fetch_node2parc_hemi_dict(self):
         """Fetch node to parcel hemi dict.
 
@@ -251,21 +273,27 @@ class Subject:
 
         for hemi, use_idx in [("LH", 1), ("RH", 2)]:
 
-            fpath = self.dirs['sc'] / "node_to_parc.csv"
-            df = pd.read_csv(fpath, 
-                             usecols=[0,use_idx], 
-                             names=['node', 'parcel'],
-                             skiprows=1, 
-                             dtype=int)
-            
+            fpath = self.dirs["sc"] / "node_to_parc.csv"
+            df = pd.read_csv(
+                fpath,
+                usecols=[0, use_idx],
+                names=["node", "parcel"],
+                skiprows=1,
+                dtype=int,
+            )
+
             modifier = 0
-            if hemi == "RH": modifier = self.parcs // 2
-            
-            df_dict = df.set_index('node').to_dict()['parcel']
-            node2parc_dict = {node:(parc+modifier if parc != 0 else parc) for node,parc in df_dict.items()}
+            if hemi == "RH":
+                modifier = self.parcs // 2
+
+            df_dict = df.set_index("node").to_dict()["parcel"]
+            node2parc_dict = {
+                node: (parc + modifier if parc != 0 else parc)
+                for node, parc in df_dict.items()
+            }
 
             node2parc_hemi_dict[hemi] = node2parc_dict
-        
+
         return node2parc_hemi_dict
 
     def _fetch_elec2hemi_dict(self):
@@ -275,10 +303,10 @@ class Subject:
             dict: keys = elec, values = hemi
         """
 
-        fpath = self.dirs['sc'] / "elec_to_hemi.csv"
+        fpath = self.dirs["sc"] / "elec_to_hemi.csv"
         df = pd.read_csv(fpath)
         df.hemi = df.hemi.str.upper()
-        return df.set_index('elec').to_dict()['hemi']
+        return df.set_index("elec").to_dict()["hemi"]
 
     def _fetch_elec2parc_dict(self):
         """Fetch elec to parcel dictionary.
@@ -286,10 +314,10 @@ class Subject:
         Returns:
             dict: keys = elec, values = hemi
         """
-        df = pd.read_csv((self.dirs['sc'] / "elec_to_parc.csv"))
-        df_dict = df.set_index('elecLabel').to_dict()['parcNumber']
-        return {elec:convert_parcs(parcs) for elec,parcs in df_dict.items()}
- 
+        df = pd.read_csv((self.dirs["sc"] / "elec_to_parc.csv"))
+        df_dict = df.set_index("elecLabel").to_dict()["parcNumber"]
+        return {elec: convert_parcs(parcs) for elec, parcs in df_dict.items()}
+
     def _fetch_elec2lobe_dict(self):
         """Fetch elec to lobe dictionary.
 
@@ -297,10 +325,10 @@ class Subject:
             dict: keys = elec, values = lobe
         """
 
-        fpath = (self.dirs['sc'] / "elec_to_lobe.csv")
+        fpath = self.dirs["sc"] / "elec_to_lobe.csv"
         df = pd.read_csv(fpath)
-        df_dict = df.set_index('elecLabel').to_dict()['Lobe']
-        return {elec:convert_lobes(lobes) for elec,lobes in df_dict.items()}
+        df_dict = df.set_index("elecLabel").to_dict()["Lobe"]
+        return {elec: convert_lobes(lobes) for elec, lobes in df_dict.items()}
 
     def _fetch_elec2index_dict(self):
         """Fetch elec to index dictionary.
@@ -310,13 +338,14 @@ class Subject:
         """
 
         # load order of electrodes
-        fpath = self.dirs['sc'] / "elec_labels.csv"
+        fpath = self.dirs["sc"] / "elec_labels.csv"
         df = pd.read_csv(fpath, header=None, names=["chanName"])
-        df['index'] = df.index
-        return df.set_index('chanName').to_dict()['index']
+        df["index"] = df.index
+        return df.set_index("chanName").to_dict()["index"]
 
-    def fetch_normalized_parc2prop_df(self, cluster, dist=45,
-                                      only_geo=False, only_wm=False):
+    def fetch_normalized_parc2prop_df(
+        self, cluster, dist=45, only_geo=False, only_wm=False
+    ):
         """Fetch df with conversion table of parcel number to proportion of
         sequences explained.
 
@@ -343,9 +372,11 @@ class Subject:
         elif only_wm:
             method = "_whiteMatter"
 
-        fname = (f"*{method}_normalizedCounts_within{dist}_max{self.seq_len}"
-                 f"_cluster{cluster}.csv")
-        fpath_lst = glob(str(self.dirs['source_loc'] / fname))
+        fname = (
+            f"*{method}_normalizedCounts_within{dist}_max{self.seq_len}"
+            f"_cluster{cluster}.csv"
+        )
+        fpath_lst = glob(str(self.dirs["source_loc"] / fname))
 
         if not (only_geo or only_wm):
             for fpath in fpath_lst:
@@ -373,12 +404,13 @@ class Subject:
         node2rsxn_df_dict = {}
 
         for hemi in "LH", "RH":
-            node2rsxn_path = self.dirs['sc'] / f"{hemi.upper()}_node_to_resection.txt"
-            node2rsxn_df = pd.read_csv(node2rsxn_path,
-                                       delim_whitespace=True,
-                                       header=None,
-                                       names=['node','is_resected']
-                                    )
+            node2rsxn_path = self.dirs["sc"] / f"{hemi.upper()}_node_to_resection.txt"
+            node2rsxn_df = pd.read_csv(
+                node2rsxn_path,
+                delim_whitespace=True,
+                header=None,
+                names=["node", "is_resected"],
+            )
             node2rsxn_df_dict[hemi] = node2rsxn_df
 
         return node2rsxn_df_dict
@@ -395,7 +427,7 @@ class Subject:
 
         # load and compute estimated lag times based on Geodesic distances
 
-        fdir = self.dirs['sc']
+        fdir = self.dirs["sc"]
         temp_minGeo = pd.read_csv((fdir / "node_minGeo_byElec.csv"), header=None)
         temp_maxGeo = pd.read_csv((fdir / "node_maxGeo_byElec.csv"), header=None)
 
@@ -413,10 +445,11 @@ class Subject:
         maxGeo_minSpeed_time = maxGeo / MIN_GEO_VEL
         maxGeo_maxSpeed_time = maxGeo / MAX_GEO_VEL
 
-        return (minGeo_maxSpeed_time,
-                minGeo_minSpeed_time,
-                maxGeo_minSpeed_time,
-                maxGeo_maxSpeed_time
+        return (
+            minGeo_maxSpeed_time,
+            minGeo_minSpeed_time,
+            maxGeo_minSpeed_time,
+            maxGeo_maxSpeed_time,
         )
 
     def fetch_wm_travel_times(self):
@@ -428,7 +461,7 @@ class Subject:
         """
 
         # load and compute estimated lag times based on WM bundle lengths
-        fdir = self.dirs['sc']
+        fdir = self.dirs["sc"]
         BL = np.loadtxt((fdir / "BL.csv"), delimiter=",", dtype=float)
         sBL = np.loadtxt((fdir / "sBL.csv"), delimiter=",", dtype=float)
 
@@ -453,8 +486,8 @@ class Subject:
         # load cluster summary df
         in_file = f"cluster_summary_max{self.seq_len}.csv"
         try:
-            df = pd.read_csv((self.dirs['seqs'] / in_file))
-            self.num_clusters = max(set(df['Cluster Number']))
+            df = pd.read_csv((self.dirs["seqs"] / in_file))
+            self.num_clusters = max(set(df["Cluster Number"]))
         except FileNotFoundError:
             self.num_clusters = "Clustering has not been run"
 
@@ -466,67 +499,77 @@ class Subject:
 
         # load bad_clusters
         in_file = "ied_bad_clusters.csv"
-        bad_df = pd.read_csv((data_directories['IED_ANALYSIS_DIR'] / in_file))
+        bad_df = pd.read_csv((data_directories["IED_ANALYSIS_DIR"] / in_file))
 
         # update self.valid_clusters
         try:
-            subj_bad_clusters = bad_df.loc[bad_df.subject == self.subj]['badClusters'].iloc[0]
-            bad_clusters = subj_bad_clusters.strip("][").split(',')
-            if bad_clusters[0] == '':
+            subj_bad_clusters = bad_df.loc[bad_df.subject == self.subj][
+                "badClusters"
+            ].iloc[0]
+            bad_clusters = subj_bad_clusters.strip("][").split(",")
+            if bad_clusters[0] == "":
                 bad_clusters = []
             else:
                 bad_clusters = [int(clust) for clust in bad_clusters]
             valid_clusters = [
-                i for i in range(1,self.num_clusters+1) if i not in bad_clusters
+                i for i in range(1, self.num_clusters + 1) if i not in bad_clusters
             ]
-            self.valid_clusters = [i for i in valid_clusters if self.cluster_nseqs[i] >= 100]
+            self.valid_clusters = [
+                i for i in valid_clusters if self.cluster_nseqs[i] >= 100
+            ]
         except IndexError:
-            self.valid_clusters = 'Subject not found in ied_bad_clusters.csv'
+            self.valid_clusters = "Subject not found in ied_bad_clusters.csv"
 
         # load soz_clusters
         in_file = "ied_soz_clusters.csv"
-        soz_df = pd.read_csv((data_directories['IED_ANALYSIS_DIR'] / in_file))
+        soz_df = pd.read_csv((data_directories["IED_ANALYSIS_DIR"] / in_file))
 
         # update self.soz_clusters
         try:
-            subj_soz_clusters = soz_df.loc[soz_df.subj == self.subj]['sozClusters'].iloc[0]
-            soz_clusters = subj_soz_clusters.strip("][").split(',')
-            if soz_clusters[0] == '':
+            subj_soz_clusters = soz_df.loc[soz_df.subj == self.subj][
+                "sozClusters"
+            ].iloc[0]
+            soz_clusters = subj_soz_clusters.strip("][").split(",")
+            if soz_clusters[0] == "":
                 self.soz_clusters = []
             else:
-                self.soz_clusters = [int(clust) for clust in soz_clusters if self.cluster_nseqs[int(clust)] >= 100]
+                self.soz_clusters = [
+                    int(clust)
+                    for clust in soz_clusters
+                    if self.cluster_nseqs[int(clust)] >= 100
+                ]
         except IndexError:
-            self.soz_clusters = 'Subject not found in ied_soz_clusters.csv'
+            self.soz_clusters = "Subject not found in ied_soz_clusters.csv"
 
     def _update_cluster_num_sequences(self):
         """Update self.cluster_nseqs value."""
 
-        fpath = self.dirs['seqs'] / f"cluster_summary_max{self.seq_len}.csv"
+        fpath = self.dirs["seqs"] / f"cluster_summary_max{self.seq_len}.csv"
         df = pd.read_csv(fpath)
 
         cluster_seq_dict = {}
-        for cluster in range(1,self.num_clusters+1):
-            n_seqs = df.loc[df['Cluster Number'] == cluster,
-                            'Number of Sequences'].iloc[0]
+        for cluster in range(1, self.num_clusters + 1):
+            n_seqs = df.loc[
+                df["Cluster Number"] == cluster, "Number of Sequences"
+            ].iloc[0]
             cluster_seq_dict[cluster] = n_seqs
 
         self.cluster_nseqs = cluster_seq_dict
 
     def _update_cluster_hemispheres(self):
         """Update self.cluster_hemis value"""
-        
-        fpath = self.dirs['seqs'] / f"cluster_summary_max{self.seq_len}.csv"
+
+        fpath = self.dirs["seqs"] / f"cluster_summary_max{self.seq_len}.csv"
         df = pd.read_csv(fpath)
 
         cluster_hemi_dict = {}
-        for cluster in range(1,self.num_clusters+1):
-            hemi = df.loc[df['Cluster Number'] == cluster, 'Hemi'].iloc[0]
+        for cluster in range(1, self.num_clusters + 1):
+            hemi = df.loc[df["Cluster Number"] == cluster, "Hemi"].iloc[0]
             cluster_hemi_dict[cluster] = hemi
 
         self.cluster_hemis = cluster_hemi_dict
 
-    def _update_source_parcels(self, dist=45, use_weighted=True, 
-                               use_best=True):
+    def _update_source_parcels(self, dist=45, use_weighted=True, use_best=True):
         """Update self.valid_sources_all with a set of every possible source
         for each cluster. Update self.valid_sources_one with a single source
         for each cluster (choosing the one that is closest to the most frequent
@@ -549,14 +592,15 @@ class Subject:
             parc2prop_df = self.fetch_normalized_parc2prop_df(cluster, dist=dist)
 
             # get all top source parcels (within 5% of the top source)
-            top_parc = parc2prop_df.sort_values(by=['propExplanatorySpikes'],
-                                                ascending=False).head(1)
-            top_proportion = top_parc['propExplanatorySpikes'].iloc[0]
+            top_parc = parc2prop_df.sort_values(
+                by=["propExplanatorySpikes"], ascending=False
+            ).head(1)
+            top_proportion = top_parc["propExplanatorySpikes"].iloc[0]
 
             if top_proportion > 0.5:
                 valid_sources_all[cluster] = set(
                     parc2prop_df.loc[
-                        parc2prop_df['propExplanatorySpikes'] > (top_proportion - .05)
+                        parc2prop_df["propExplanatorySpikes"] > (top_proportion - 0.05)
                     ].index
                 )
             else:
@@ -570,7 +614,8 @@ class Subject:
                     # only compare sources with max proportion explained
                     sources_to_compare = set(
                         parc2prop_df.loc[
-                            parc2prop_df.propExplanatorySpikes == parc2prop_df.max().iloc[0]
+                            parc2prop_df.propExplanatorySpikes
+                            == parc2prop_df.max().iloc[0]
                         ].index
                     )
                 else:
@@ -580,10 +625,9 @@ class Subject:
                 if use_weighted:
                     min_dist = np.Inf
                     for source in sources_to_compare:
-                        d = self.compute_weighted_source2elec_dist(cluster,
-                                                                   source=source,
-                                                                   lead_only=True,
-                                                                   use_all_seqs=True)
+                        d = self.compute_weighted_source2elec_dist(
+                            cluster, source=source, lead_only=True, use_all_seqs=True
+                        )
                         if min_dist > d:
                             min_dist = d
                             best_source = source
@@ -614,13 +658,14 @@ class Subject:
         """Update self.engel_class and self.engel_months."""
 
         # load hemi df
-        engel_fpath = data_directories['IED_ANALYSIS_DIR'] / "ied_subj_engelscores.csv"
+        engel_fpath = data_directories["IED_ANALYSIS_DIR"] / "ied_subj_engelscores.csv"
         engel_df = pd.read_csv(engel_fpath)
 
-        engel_dict = {'MoreThan24 Engel Class': 'MoreThan24 Months',
-                      'Mo24 Engel Class': 24,
-                      'Mo12 Engel Class': 12
-                    }
+        engel_dict = {
+            "MoreThan24 Engel Class": "MoreThan24 Months",
+            "Mo24 Engel Class": 24,
+            "Mo12 Engel Class": 12,
+        }
 
         # iterate through engel_df columns from longest time to shortest
         for col, time in engel_dict.items():
@@ -630,7 +675,7 @@ class Subject:
             # set months
             if type(time) is str:
                 engel_months = engel_df[engel_df["Patient"] == self.subj][time].iloc[0]
-            elif engel_class in ["no_resection","no_outcome","deceased"]:
+            elif engel_class in ["no_resection", "no_outcome", "deceased"]:
                 engel_months = np.nan
             else:
                 engel_months = time
@@ -663,11 +708,11 @@ class Subject:
         """
 
         elec_seqs, _ = self.fetch_sequences(cluster)
-        lead_elecs = elec_seqs[:,0]
+        lead_elecs = elec_seqs[:, 0]
 
         # use normalized parc2prop file as template for lead_elec_df
         lead_elec_df = self.fetch_normalized_parc2prop_df(cluster)
-        lead_elec_df['propExplanatorySpikes'] = 0
+        lead_elec_df["propExplanatorySpikes"] = 0
 
         parc_counts = {}
         for elec in lead_elecs:
@@ -676,12 +721,14 @@ class Subject:
 
             # update count for each parcel
             for parc_idx in parc_idxs:
-                parc_counts.setdefault(parc_idx,0)
+                parc_counts.setdefault(parc_idx, 0)
                 parc_counts[parc_idx] += 1
 
         # normalize based on total number of sequences
         n_seqs = elec_seqs.shape[0]
-        normalized_counts = {parc:(count / n_seqs) for parc, count in parc_counts.items()}
+        normalized_counts = {
+            parc: (count / n_seqs) for parc, count in parc_counts.items()
+        }
 
         # iterate through normalized counts
         for parc_idx, prop in normalized_counts.items():
@@ -713,15 +760,14 @@ class Subject:
 
             # mask out nodes for parcel and find proportion of nodes resected
             parc_nodes = self.parc2node_dict[parcel]
-            resected_prop = hemi_node2rsxn.iloc[parc_nodes].mean()['is_resected']
+            resected_prop = hemi_node2rsxn.iloc[parc_nodes].mean()["is_resected"]
 
             # add to list
             resected_props.append(resected_prop)
 
         return resected_props
 
-    def compute_rsxn_source_arr(self, n_cluster, all_sources=False,
-                                source=None):
+    def compute_rsxn_source_arr(self, n_cluster, all_sources=False, source=None):
         """Create n_node array with a gray resection zone and green TN/TP
         regions or red FN/FP parcels.
 
@@ -740,33 +786,38 @@ class Subject:
             else:
                 sources = self.valid_sources_one[n_cluster]
         else:
-            assert source in range(1,self.parcs+1)
+            assert source in range(1, self.parcs + 1)
             sources = [source]
 
         hemi = get_parcel_hemi(list(sources)[0], self.parcs)
 
         # retrieve array of 0s (non-resected) and 1s (resected)
-        rsxn_arr = self.node2rsxn_df_dict[hemi.upper()]['is_resected'].to_numpy(dtype=float).copy()
+        rsxn_arr = (
+            self.node2rsxn_df_dict[hemi.upper()]["is_resected"]
+            .to_numpy(dtype=float)
+            .copy()
+        )
 
         # get resection props
         rsxn_props = self.compute_resected_prop(sources)
 
-        for source,rsxn_prop in zip(sources,rsxn_props):
+        for source, rsxn_prop in zip(sources, rsxn_props):
 
             mask = self.parc2node_dict[source]
 
             accuracy = get_prediction_accuracy(self.engel_class, rsxn_prop)
 
             # set values depending on concordance
-            if accuracy.startswith('T'):
+            if accuracy.startswith("T"):
                 rsxn_arr[mask] = 2.6
-            elif accuracy.startswith('F'):
+            elif accuracy.startswith("F"):
                 rsxn_arr[mask] = 4
 
         return rsxn_arr, hemi
 
-    def compute_localizing_seq_idxs(self, cluster, source, only_geo=False,
-                                    only_wm=False):
+    def compute_localizing_seq_idxs(
+        self, cluster, source, only_geo=False, only_wm=False
+    ):
         """Return an array of indices for which a source successfully localizes
         the sequences of a given cluster.
 
@@ -789,9 +840,11 @@ class Subject:
         elif only_wm:
             method = "_whiteMatter"
 
-        fname = (f"*{method}_sourceParcels_within{self.dist}_max{self.seq_len}"
-                 f"_cluster{cluster}.csv")
-        fpath_lst = glob(str(self.dirs['source_loc'] / fname))
+        fname = (
+            f"*{method}_sourceParcels_within{self.dist}_max{self.seq_len}"
+            f"_cluster{cluster}.csv"
+        )
+        fpath_lst = glob(str(self.dirs["source_loc"] / fname))
 
         if not (only_geo or only_wm):
             for fpath in fpath_lst:
@@ -806,8 +859,7 @@ class Subject:
         seq_sources = np.loadtxt(parc2prop_path, dtype=float, delimiter=",")
 
         # return all indices where sequence localized to source
-        return np.squeeze(np.argwhere(np.sum(seq_sources == source, axis=1)),
-                          axis=1)
+        return np.squeeze(np.argwhere(np.sum(seq_sources == source, axis=1)), axis=1)
 
     def get_cluster_lobe(self, cluster):
         """Return the majority lobe for all spikes in a given cluster.
@@ -821,34 +873,31 @@ class Subject:
         """
 
         seqs, delays = self.fetch_sequences(cluster)
-        elec_count_df = retrieve_lead_counts(self.elec2index_dict.keys(),
-                                             seqs,
-                                             delays
-                                            )
-        elec_count_dict = elec_count_df['Within 100ms'].to_dict()
+        elec_count_df = retrieve_lead_counts(self.elec2index_dict.keys(), seqs, delays)
+        elec_count_dict = elec_count_df["Within 100ms"].to_dict()
 
         lobe_count_dict = {}
         for elec, count in elec_count_dict.items():
             lobes = self.elec2lobe_dict[elec]
             for lobe in lobes:
                 # ignore electrodes without a parcel assigned
-                if lobe == '':
+                if lobe == "":
                     continue
-                lobe_count_dict.setdefault(lobe,0)
+                lobe_count_dict.setdefault(lobe, 0)
                 lobe_count_dict[lobe] += count
 
         total_counts = sum(lobe_count_dict.values())
         top_lobe = max(lobe_count_dict, key=lobe_count_dict.get)
-        
+
         # require top lobe to include majority of all spikes
         if lobe_count_dict[top_lobe] >= (total_counts / 2):
             return top_lobe
         else:
             return "multilobar"
 
-    def compute_weighted_source2elec_dist(self, cluster, source=None,
-                                          lead_only=False, use_geo=False,
-                                          use_all_seqs=False):
+    def compute_weighted_source2elec_dist(
+        self, cluster, source=None, lead_only=False, use_geo=False, use_all_seqs=False
+    ):
         """Compute the distance between a cluster and source, using a variety
         of possible weighted schema.
 
@@ -876,25 +925,28 @@ class Subject:
         seqs, delays = self.fetch_sequences(cluster=cluster)
 
         if use_all_seqs:
-            count_df = retrieve_lead_counts(self.elec2index_dict.keys(),
-                                            seqs,
-                                            delays)
+            count_df = retrieve_lead_counts(self.elec2index_dict.keys(), seqs, delays)
         else:
-            source_idxs = self.compute_localizing_seq_idxs(cluster=cluster, source=source)
-            count_df = retrieve_lead_counts(self.elec2index_dict.keys(),
-                                            seqs[source_idxs,:],
-                                            delays[source_idxs,:])
+            source_idxs = self.compute_localizing_seq_idxs(
+                cluster=cluster, source=source
+            )
+            count_df = retrieve_lead_counts(
+                self.elec2index_dict.keys(),
+                seqs[source_idxs, :],
+                delays[source_idxs, :],
+            )
 
         if lead_only:
-            col='Leader'
+            col = "Leader"
         else:
-            col='Within 100ms'
+            col = "Within 100ms"
 
         count_dict = count_df[col].to_dict()
 
         if use_geo:
-            temp_minGeo = pd.read_csv((self.dirs['sc'] / "node_minGeo_byElec.csv"),
-                                    header=None)
+            temp_minGeo = pd.read_csv(
+                (self.dirs["sc"] / "node_minGeo_byElec.csv"), header=None
+            )
             minGeo = temp_minGeo.to_numpy(copy=True)
 
         dist_sum, count_total = 0, 0
@@ -904,22 +956,22 @@ class Subject:
                 continue
             elec_idx = self.elec2index_dict[elec]
             if use_geo:
-                dist = compute_elec2parc_geo(self.parc2node_dict,
-                                             minGeo,
-                                             elec_idx,
-                                             source)
+                dist = compute_elec2parc_geo(
+                    self.parc2node_dict, minGeo, elec_idx, source
+                )
             else:
-                dist = compute_elec2parc_euc(self.parc_minEuclidean_byElec,
-                                             elec_idx,
-                                             source)
+                dist = compute_elec2parc_euc(
+                    self.parc_minEuclidean_byElec, elec_idx, source
+                )
 
-            dist_sum += (dist * count)
+            dist_sum += dist * count
             count_total += count
 
         return dist_sum / count_total
-    
-    def compute_farthest_elec_dists(self, cluster, seq_indices=None,
-                                    source=None, use_geo=True):
+
+    def compute_farthest_elec_dists(
+        self, cluster, seq_indices=None, source=None, use_geo=True
+    ):
         """Return an array of distances to the farthest electrode in each 
         sequence. Hypothesis is that sequences requiring white matter will have
         a higher proportion of distant electrodes, especially beyond 45 mm.
@@ -942,7 +994,7 @@ class Subject:
             assert source in range(self.parcs)
 
         seqs, _ = self.fetch_sequences(cluster=cluster)
-        
+
         if seq_indices is None:
             pass
         elif seq_indices.size == 0:
@@ -951,35 +1003,36 @@ class Subject:
             seqs = seqs[seq_indices]
 
         if use_geo:
-            temp_minGeo = pd.read_csv((self.dirs['sc'] / "node_minGeo_byElec.csv"),
-                                    header=None)
+            temp_minGeo = pd.read_csv(
+                (self.dirs["sc"] / "node_minGeo_byElec.csv"), header=None
+            )
             minGeo = temp_minGeo.to_numpy(copy=True)
 
         max_dists = np.zeros(seqs.shape[0])
 
         for i in range(seqs.shape[0]):
-            row = seqs[i,:]
+            row = seqs[i, :]
             elecs = [elec for elec in row if elec != "nan"]
-            
+
             max_dist = 0
             for elec in elecs:
                 elec_idx = self.elec2index_dict[elec]
                 if use_geo:
-                    dist = compute_elec2parc_geo(self.parc2node_dict,
-                                                 minGeo,
-                                                 elec_idx,
-                                                 source)
+                    dist = compute_elec2parc_geo(
+                        self.parc2node_dict, minGeo, elec_idx, source
+                    )
                 else:
-                    dist = compute_elec2parc_euc(self.parc_minEuclidean_byElec,
-                                                 elec_idx,
-                                                 source)
+                    dist = compute_elec2parc_euc(
+                        self.parc_minEuclidean_byElec, elec_idx, source
+                    )
 
-                if dist > max_dist: max_dist = dist
-            
+                if dist > max_dist:
+                    max_dist = dist
+
             max_dists[i] = max_dist
 
         return max_dists
-    
+
     def compute_jaro_similarities(self, cluster):
         """Compute a Jaro-Winkler similarity matrix based on an array of 
         electrode sequences. Saves out the matrix for future usage.
@@ -993,35 +1046,31 @@ class Subject:
 
         seqs, _ = self.fetch_sequences(cluster, all_elecs=True)
         n_sequences = seqs.shape[0]
-        
+
         jaro_similarities = np.zeros((n_sequences, n_sequences))
 
         # retrieve similarities, ignoring 'nan' values
         for i in range(n_sequences):
-            seq_i = [elec for elec in seqs[i,:] if elec != 'nan']
+            seq_i = [elec for elec in seqs[i, :] if elec != "nan"]
             for j in range(i, n_sequences):
-                seq_j = [elec for elec in seqs[j,:] if elec != 'nan']
+                seq_j = [elec for elec in seqs[j, :] if elec != "nan"]
                 similarity = jaro.jaro_winkler_metric(seq_i, seq_j)
-                jaro_similarities[i,j] = similarity
+                jaro_similarities[i, j] = similarity
 
         # symmetrize final matrix and convert to distance matrix
         jaro_similarities = np.fmax(jaro_similarities.T, jaro_similarities)
-        
+
         if cluster != None:
-            fpath = self.dirs['seqs'] / (f"cluster{cluster}_similarityMatrix_"
-                                         f"max{self.seq_len}.csv")
+            fpath = self.dirs["seqs"] / (
+                f"cluster{cluster}_similarityMatrix_" f"max{self.seq_len}.csv"
+            )
         else:
-            fpath = self.dirs['seqs'] / (f"similarityMatrix_"
-                                         f"max{self.seq_len}.csv")
-        
-        np.savetxt(fpath, 
-                   X=jaro_similarities,
-                   fmt="%.3f",
-                   delimiter=','
-                )
-        
+            fpath = self.dirs["seqs"] / (f"similarityMatrix_" f"max{self.seq_len}.csv")
+
+        np.savetxt(fpath, X=jaro_similarities, fmt="%.3f", delimiter=",")
+
         return jaro_similarities
-        
+
     def retrieve_jaro_similarities(self, cluster):
         """Retrieve a jaro similarity matrix for a given cluster
 
@@ -1031,24 +1080,22 @@ class Subject:
         Returns:
             np.array: Jaro-Winkler similarity matrix
         """
-    
+
         if cluster != None:
-            fpath = self.dirs['seqs'] / (f"cluster{cluster}_similarityMatrix_"
-                                         f"max{self.seq_len}.csv")
+            fpath = self.dirs["seqs"] / (
+                f"cluster{cluster}_similarityMatrix_" f"max{self.seq_len}.csv"
+            )
         else:
-            fpath = self.dirs['seqs'] / (f"similarityMatrix_"
-                                         f"max{self.seq_len}.csv")
-        
+            fpath = self.dirs["seqs"] / (f"similarityMatrix_" f"max{self.seq_len}.csv")
+
         if fpath.exists():
-            similarities_arr = np.loadtxt(fpath,
-                                          dtype=float,
-                                          delimiter=",")
+            similarities_arr = np.loadtxt(fpath, dtype=float, delimiter=",")
         else:
             similarities_arr = self.compute_jaro_similarities(cluster)
-        
+
         return similarities_arr
-    
-    def compute_proportion_neighbors(self, cluster, neighbor_thresh=12.):
+
+    def compute_proportion_neighbors(self, cluster, neighbor_thresh=12.0):
         """Compute the average proportion of neighbor electrodes included 
         within sequences in a cluster. Hypothesis is that a greater proportion
         correlates with being closer to epileptogenic zone.
@@ -1060,32 +1107,33 @@ class Subject:
         Returns:
             float: average proportion of neighbor electrodes firing
         """
-        
+
         seqs, _ = self.fetch_sequences(cluster)
         n_sequences = seqs.shape[0]
-        
+
         intersection_total = 0
         neighbors_total = 0
-        
+
         # iterate through sequences, ignoring 'nan' values
         for i in range(n_sequences):
-            seq = [elec for elec in seqs[i,:] if elec != 'nan']
+            seq = [elec for elec in seqs[i, :] if elec != "nan"]
             elec_idxs = [self.elec2index_dict[elec] for elec in seq]
-            
+
             # Get the list of all neighbor indices within neighbor threshold
-            neighbors = set(np.argwhere(
-                self.elec_euc_arr[elec_idxs,:] < neighbor_thresh
-            )[:,1])
-            
+            neighbors = set(
+                np.argwhere(self.elec_euc_arr[elec_idxs, :] < neighbor_thresh)[:, 1]
+            )
+
             # find the number of intersecting electrodes (neighbors in sequence)
             intersection = neighbors.intersection(set(elec_idxs))
             intersection_total += len(intersection)
             neighbors_total += len(neighbors)
-        
+
         return intersection_total / neighbors_total
-    
-    def compute_closest_elec_metrics(self, cluster, seq_indices=None,
-                                     source=None, use_geo=True):
+
+    def compute_closest_elec_metrics(
+        self, cluster, seq_indices=None, source=None, use_geo=True
+    ):
         """Return arrays filled with the position, distance, and lag time of 
         the closest electrode to the source for every sequence. Hypothesis is 
         that sequences requiring white matter will allow for electrodes firing 
@@ -1111,18 +1159,19 @@ class Subject:
             assert source in range(self.parcs)
 
         seqs, delays = self.fetch_sequences(cluster=cluster)
-        
+
         if seq_indices is None:
-            pass # use all sequences
+            pass  # use all sequences
         elif seq_indices.size == 0:
-            return [np.array(())]*3 # no sequences
+            return [np.array(())] * 3  # no sequences
         else:
             seqs = seqs[seq_indices]
             delays = delays[seq_indices]
 
         if use_geo:
-            temp_minGeo = pd.read_csv((self.dirs['sc'] / "node_minGeo_byElec.csv"),
-                                    header=None)
+            temp_minGeo = pd.read_csv(
+                (self.dirs["sc"] / "node_minGeo_byElec.csv"), header=None
+            )
             minGeo = temp_minGeo.to_numpy(copy=True)
 
         closest_elec_positions = np.zeros(seqs.shape[0])
@@ -1130,35 +1179,35 @@ class Subject:
         closest_elec_delays = np.zeros(seqs.shape[0])
 
         for i in range(seqs.shape[0]):
-            row = seqs[i,:]
+            row = seqs[i, :]
             elecs = [elec for elec in row if elec != "nan"]
-            
+
             min_dist = np.Inf
             closest_position = -1
             for j in range(len(elecs)):
                 elec_idx = self.elec2index_dict[elecs[j]]
                 if use_geo:
-                    dist = compute_elec2parc_geo(self.parc2node_dict,
-                                                 minGeo,
-                                                 elec_idx,
-                                                 source)
+                    dist = compute_elec2parc_geo(
+                        self.parc2node_dict, minGeo, elec_idx, source
+                    )
                 else:
-                    dist = compute_elec2parc_euc(self.parc_minEuclidean_byElec,
-                                                 elec_idx,
-                                                 source)
+                    dist = compute_elec2parc_euc(
+                        self.parc_minEuclidean_byElec, elec_idx, source
+                    )
 
-                if dist < min_dist: 
+                if dist < min_dist:
                     min_dist = dist
-                    closest_position = j + 1 # add 1 so that the 1st elec is 1
-                
+                    closest_position = j + 1  # add 1 so that the 1st elec is 1
+
             closest_elec_positions[i] = closest_position
             closest_elec_dists[i] = min_dist
-            closest_elec_delays[i] = delays[i,closest_position-1]
+            closest_elec_delays[i] = delays[i, closest_position - 1]
 
         return closest_elec_positions, closest_elec_dists, closest_elec_delays
-    
-    def compute_all_elec_dists(self, cluster, seq_indices=None,
-                               source=None, use_geo=True):
+
+    def compute_all_elec_dists(
+        self, cluster, seq_indices=None, source=None, use_geo=True
+    ):
         """Return an array of distances to all electrodes in each sequence. 
 
         Args:
@@ -1181,7 +1230,7 @@ class Subject:
             assert source in range(self.parcs)
 
         seqs, _ = self.fetch_sequences(cluster=cluster)
-        
+
         if seq_indices is None:
             pass
         elif seq_indices.size == 0:
@@ -1190,43 +1239,41 @@ class Subject:
             seqs = seqs[seq_indices]
 
         if use_geo:
-            temp_minGeo = pd.read_csv((self.dirs['sc'] / "node_minGeo_byElec.csv"),
-                                    header=None)
+            temp_minGeo = pd.read_csv(
+                (self.dirs["sc"] / "node_minGeo_byElec.csv"), header=None
+            )
             minGeo = temp_minGeo.to_numpy(copy=True)
 
         all_dists = np.array(())
 
         for i in range(seqs.shape[0]):
-            row = seqs[i,:]
+            row = seqs[i, :]
             elecs = [elec for elec in row if elec != "nan"]
             seq_dists = np.zeros(len(elecs))
 
             for j, elec in enumerate(elecs):
                 elec_idx = self.elec2index_dict[elec]
                 if use_geo:
-                    dist = compute_elec2parc_geo(self.parc2node_dict,
-                                                 minGeo,
-                                                 elec_idx,
-                                                 source)
+                    dist = compute_elec2parc_geo(
+                        self.parc2node_dict, minGeo, elec_idx, source
+                    )
                 else:
-                    dist = compute_elec2parc_euc(self.parc_minEuclidean_byElec,
-                                                 elec_idx,
-                                                 source)
+                    dist = compute_elec2parc_euc(
+                        self.parc_minEuclidean_byElec, elec_idx, source
+                    )
 
                 seq_dists[j] = dist
-            
-            all_dists = np.hstack((all_dists,seq_dists))
+
+            all_dists = np.hstack((all_dists, seq_dists))
 
         return all_dists
-    
+
     def fetch_minmax_distances(self):
-    
+
         # load min/max WM bundle lengths
 
-        BL = np.loadtxt((self.dirs['sc'] / 'BL.csv'), 
-                        delimiter=",", dtype=float)
-        sBL = np.loadtxt((self.dirs['sc'] / 'sBL.csv'), 
-                         delimiter=",", dtype=float)
+        BL = np.loadtxt((self.dirs["sc"] / "BL.csv"), delimiter=",", dtype=float)
+        sBL = np.loadtxt((self.dirs["sc"] / "sBL.csv"), delimiter=",", dtype=float)
 
         BL[BL == 0] = np.NaN
         sBL[sBL == 0] = np.NaN
@@ -1238,17 +1285,19 @@ class Subject:
         maxBL[np.diag_indices_from(maxBL)] = 10
 
         # load min/max geodesic distances
-        temp_minGeo = pd.read_csv((self.dirs['sc'] / "node_minGeo_byElec.csv"), 
-                                header=None)
-        temp_maxGeo = pd.read_csv((self.dirs['sc'] / "node_maxGeo_byElec.csv"), 
-                                header=None)
+        temp_minGeo = pd.read_csv(
+            (self.dirs["sc"] / "node_minGeo_byElec.csv"), header=None
+        )
+        temp_maxGeo = pd.read_csv(
+            (self.dirs["sc"] / "node_maxGeo_byElec.csv"), header=None
+        )
         minGeo = temp_minGeo.to_numpy(copy=True)
         maxGeo = temp_maxGeo.to_numpy(copy=True)
 
-        # set all minimum values > dist to np.NaN and all max values to dist 
+        # set all minimum values > dist to np.NaN and all max values to dist
         # that have a min value less than dist
         minGeo[minGeo > self.dist] = np.NaN
         maxGeo[np.isnan(minGeo)] = np.NaN
         maxGeo[maxGeo > self.dist] = self.dist
-        
+
         return minBL, maxBL, minGeo, maxGeo
