@@ -25,7 +25,7 @@ class Subject:
         use_weighted=True,
         use_best=True,
         in_progress=False,
-        cutoff=0.5
+        cutoff=0.5,
     ):
         """Create an instance of Subject for analysis of IED spike data
 

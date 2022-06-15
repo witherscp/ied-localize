@@ -23,6 +23,7 @@ def lead_geodesic(
     only_geo=False,
     only_wm=False,
     n_steps=20,
+    fixed_geo=False,
 ):
     """Localize the sources of a sequence based on the assumption that the lead
     electrode receives signal via geodesic spread. Returns a list of unique 
@@ -48,6 +49,8 @@ def lead_geodesic(
         n_steps (int, optional): number of steps used in linspace; a larger 
             number will increase max/min range but slow down algorithm. 
             Defaults to 20.
+        fixed_geo (bool, optional): require the same geodesic conduction 
+            velocity in all directions. Defaults to False.
 
     Returns:
         list: list of unique source parcel numbers (if [], no parcels explain 
@@ -85,10 +88,14 @@ def lead_geodesic(
     # check possibilities where followers are only geodesic
     if only_geo:
 
-        # check for existence of overlapping range
-        largest_min_v = np.max(min_v_geo, axis=1)
-        smallest_max_v = np.min(max_v_geo, axis=1)
-        source_indices = np.where(smallest_max_v > largest_min_v)[0]
+        if fixed_geo:
+            # check for existence of overlapping range
+            largest_min_v = np.max(min_v_geo, axis=1)
+            smallest_max_v = np.min(max_v_geo, axis=1)
+            source_indices = np.where(smallest_max_v > largest_min_v)[0]
+        else:
+            # check for nodes with all electrodes in velocity range
+            source_indices = np.where(np.all(max_v_geo > min_v_geo, axis=1))[0]
 
     # check possibilities where followers are geodesic or WM
     else:
@@ -104,7 +111,7 @@ def lead_geodesic(
         # fill bl arrays of shape (n_parcs, n_elecs, max(n_parc_idxs))
         parc_min_bl_all = minBL[:, f_parc_idxs]
         parc_max_bl_all = maxBL[:, f_parc_idxs]
-        
+
         # downsize arrays based on the assumption that nearby parcels have
         # overlapping ranges of bundle length, when they are both connected
         # to the same parcel
@@ -152,14 +159,22 @@ def lead_geodesic(
             :, range(n_followers), list(product(range(2), repeat=n_followers)), :
         ]
 
-        # find overlapping interval along axis=2 (electrodes)
-        # largest_min and smallest_max have shape (N_NODES,2**n_elecs)
-        largest_min_v = np.max(shuffled[:, :, :, 0], axis=2)
-        smallest_max_v = np.min(shuffled[:, :, :, 1], axis=2)
+        if fixed_geo:
+            # find overlapping interval along axis=2 (electrodes)
+            # largest_min and smallest_max have shape (N_NODES,2**n_elecs)
+            largest_min_v = np.max(shuffled[:, :, :, 0], axis=2)
+            smallest_max_v = np.min(shuffled[:, :, :, 1], axis=2)
 
-        # find any combination that had an overlapping interval for a node
-        overlapping = np.any((smallest_max_v > largest_min_v), axis=1)
-        source_indices = np.where(overlapping)[0]
+            # find any combination that had an overlapping interval for a node
+            overlapping = np.any((smallest_max_v > largest_min_v), axis=1)
+            source_indices = np.where(overlapping)[0]
+        else:
+            # check for nodes with all electrodes in velocity range
+            source_indices = np.where(
+                np.any(
+                    np.all(shuffled[:, :, :, 1] > shuffled[:, :, :, 0], axis=2), axis=1
+                )
+            )[0]
 
     # convert indices to parcels
     if source_indices.size == 0:
@@ -181,6 +196,7 @@ def lead_wm(
     only_geo=False,
     only_wm=False,
     n_steps=10,
+    fixed_geo=False,
 ):
     """Localize the sources of a sequence based on the assumption that the lead
     electrode receives signal via geodesic spread. Returns a list of unique 
@@ -203,6 +219,8 @@ def lead_wm(
         n_steps (int, optional): number of steps used in linspace; a larger 
             number will increase max/min range but slow down algorithm. 
             Defaults to 10.
+        fixed_geo (bool, optional): require the same geodesic conduction 
+            velocity in all directions. Defaults to False.
 
     Returns:
         list: list of unique source parcel numbers (if [], then no parcels 
@@ -230,12 +248,9 @@ def lead_wm(
             MIN_GEO_VEL,
             MAX_GEO_VEL,
             lags,
-            fixed_velocity=True,
+            fixed_velocity=fixed_geo,
             n_steps=n_steps,
         )
-
-        # num of steps used for testing velocities and distances
-        n_steps = min_denom.shape[0]
 
     # iterate over parcel combinations
     for l_parc_idx in l_parc_idxs:
@@ -256,7 +271,7 @@ def lead_wm(
         # fill bl arrays of shape (n_parcs, n_elecs, max(n_parc_idxs))
         parc_min_bl_all = minBL[:, f_parc_idxs]
         parc_max_bl_all = maxBL[:, f_parc_idxs]
-        
+
         # downsize arrays based on the assumption that nearby parcels have
         # overlapping ranges of bundle length, when they are both connected
         # to the same parcel
@@ -286,13 +301,15 @@ def lead_wm(
         # check possibilities where followers are WM or geodesic
         else:
 
-            # broadcast min/max_v_wm arrays to stack with combo arrays
-            # these will have shape (n_steps, n_parcs, n_followers)
-            min_v_wm = np.broadcast_to(min_v_wm, (n_steps, *min_v_wm.shape))
-            max_v_wm = np.broadcast_to(max_v_wm, (n_steps, *max_v_wm.shape))
+            if fixed_geo:
+                # broadcast min/max_v_wm arrays to stack with combo arrays
+                # these will have shape (n_steps, n_parcs, n_followers)
+                n_steps = combo_min_v_wm.shape[0]
+                min_v_wm = np.broadcast_to(min_v_wm, (n_steps, *min_v_wm.shape))
+                max_v_wm = np.broadcast_to(max_v_wm, (n_steps, *max_v_wm.shape))
 
             # stack arrays to find all combinations, creates array of shape
-            # (n_steps, n_parcs, n_followers, v/combo_v, min/max)
+            # (n_steps [optional], n_parcs, n_followers, v/combo_v, min/max)
             master_v = np.stack(
                 (
                     np.stack((min_v_wm, combo_min_v_wm), axis=-1),
@@ -302,27 +319,41 @@ def lead_wm(
             )
 
             # shuffle combinations of v/combo_v, creating array with shape
-            # (n_steps, n_parcs, 2**n_followers, n_followers, min/max)
+            # (n_steps [optional], parcs, 2**n_followers, n_followers, min/max)
             # each index in the second dimension is a different combination
             # of v/combo_v
-            shuffled = master_v[
-                :,
-                :,
-                range(n_followers),
-                list(product(range(2), repeat=n_followers)),
-                :,
-            ]
+            if fixed_geo:
+                shuffled = master_v[
+                    :,
+                    :,
+                    range(n_followers),
+                    list(product(range(2), repeat=n_followers)),
+                    :,
+                ]
+                min_slice = np.s_[:, :, :, :, 0]
+                max_slice = np.s_[:, :, :, :, 1]
+                elec_axis = 3
+            else:
+                shuffled = master_v[
+                    :,
+                    range(n_followers),
+                    list(product(range(2), repeat=n_followers)),
+                    :,
+                ]
+                min_slice = np.s_[:, :, :, 0]
+                max_slice = np.s_[:, :, :, 1]
+                elec_axis = 2
 
             # find overlapping interval along axis=3 (electrodes)
             # largest_min and smallest_max have shape
-            # (n_steps, n_parcs, 2**n_elecs)
-            largest_min_v = np.max(shuffled[:, :, :, :, 0], axis=3)
-            smallest_max_v = np.min(shuffled[:, :, :, :, 1], axis=3)
+            # (n_steps [optional], n_parcs, 2**n_elecs)
+            largest_min_v = np.max(shuffled[min_slice], axis=elec_axis)
+            smallest_max_v = np.min(shuffled[max_slice], axis=elec_axis)
 
             # find any combination that had an overlapping interval for a
             # parcel
             source_parcs = source_parcs.union(
-                set(np.where(smallest_max_v > largest_min_v)[1])
+                set(np.where(smallest_max_v > largest_min_v)[elec_axis - 2])
             )
 
     # return list of source parcels
@@ -344,8 +375,8 @@ def find_denom_range(
         max_vel (float): maximum velocity (geodesic or wm)
         lags (np.array): array of lag times to followers
         fixed_velocity (bool, optional): followers must receive signal at the 
-            same velocity (used for lead wm/ follower geodesic). Defaults to 
-            False.
+            same velocity (used for lead wm/ follower geodesic, with 
+            fixed_geo). Defaults to False.
         n_steps (int, optional): number of steps used in linspace; a larger 
             number will increase max/min range but slow down algorithm. 
             Defaults to 50.

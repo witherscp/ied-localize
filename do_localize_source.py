@@ -25,6 +25,9 @@ if __name__ == "__main__":
         "--only_wm", action="store_true", help="use white matter localization only"
     )
     parser.add_argument(
+        "--fixed_geo", action="store_true", help="use white matter localization only"
+    )
+    parser.add_argument(
         "-p",
         "--num_parc",
         default=600,
@@ -48,6 +51,7 @@ if __name__ == "__main__":
     max_length = int(args.max_length)
     only_geo = args.only_geo
     only_wm = args.only_wm
+    fixed_geo = args.fixed_geo
 
     # either run only geodesic, only white matter, or combination method
     assert not (only_geo and only_wm)
@@ -128,6 +132,7 @@ if __name__ == "__main__":
                         maxBL,
                         only_geo=only_geo,
                         only_wm=only_wm,
+                        fixed_geo=fixed_geo,
                     )
                     seq_sources = seq_sources + geo_sources
 
@@ -141,6 +146,7 @@ if __name__ == "__main__":
                     maxBL,
                     only_geo=only_geo,
                     only_wm=only_wm,
+                    fixed_geo=fixed_geo,
                 )
                 seq_sources = seq_sources + wm_sources
 
@@ -159,6 +165,7 @@ if __name__ == "__main__":
                     maxBL,
                     only_geo=only_geo,
                     only_wm=only_wm,
+                    fixed_geo=fixed_geo,
                 )
 
                 wm_sources = lead_wm(
@@ -171,6 +178,7 @@ if __name__ == "__main__":
                     maxBL,
                     only_geo=only_geo,
                     only_wm=only_wm,
+                    fixed_geo=fixed_geo,
                 )
 
                 seq_sources = geo_sources + wm_sources

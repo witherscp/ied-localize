@@ -615,15 +615,15 @@ def extend_lst_of_lsts(lst_of_lsts):
     Returns:
         list: list of lists with uniform lengths
     """
-    
+
     max_len = max([len(lst) for lst in lst_of_lsts])
     out_lst = []
-    
+
     for lst in lst_of_lsts:
-        
+
         while len(lst) < max_len:
             lst.append(lst[-1])
-        
+
         out_lst.append(lst)
-            
+
     return out_lst
