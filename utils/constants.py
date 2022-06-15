@@ -2,24 +2,17 @@ from matplotlib.colors import LinearSegmentedColormap
 from pathlib import Path
 from sys import platform
 
-# check OS
+# set MAIN_DIR based on local system directory structure
 assert platform in "darwin", "linux"
-
 if platform == "darwin":
-    NEU_DIR = Path("/Volumes/Shares/NEU")
+    MAIN_DIR = Path("/Volumes/Shares/NEU/Projects")
 elif platform == "linux":
-    NEU_DIR = Path("/shares/NEU")
+    MAIN_DIR = Path("/shares/NEU/Projects")
 
-PROJECTS_DIR = NEU_DIR / "Projects"
-USERS_DIR = NEU_DIR / "Users"
 data_directories = {
-    "PROJECTS_DIR": NEU_DIR / "Projects",
-    "MRI_DIR": PROJECTS_DIR / "MRI",
-    "DTI_DIR": PROJECTS_DIR / "DTI",
-    "IED_DIR": PROJECTS_DIR / "iEEG" / "IED_data",
-    "USERS_DIR": NEU_DIR / "Users",
-    "FIGURES_DIR": USERS_DIR / "price" / "figures",
-    "IED_ANALYSIS_DIR": USERS_DIR / "price" / "ied_analysis",
+    "MRI_DIR": MAIN_DIR / "MRI",
+    "DTI_DIR": MAIN_DIR / "DTI",
+    "IED_DIR": MAIN_DIR / "iEEG" / "IED_data",
 }
 
 # propagation parameters
