@@ -1278,6 +1278,11 @@ class Subject:
         return all_dists
 
     def fetch_minmax_distances(self):
+        """Fetch min/max white matter and geodesic distances.
+
+        Returns:
+            tuple: minBL, maxBL, minGeo, maxGeo (np.arrays)
+        """
 
         # load min/max WM bundle lengths
 
@@ -1310,3 +1315,18 @@ class Subject:
         maxGeo[maxGeo > self.dist] = self.dist
 
         return minBL, maxBL, minGeo, maxGeo
+
+    def fetch_pial_surface_dict(self):
+        """Fetch hemi dictionary of pial surface mesh objects.
+
+        Returns:
+            dict: keys = ["LH","RH"], 
+                  values = nilearn.surface.surface.mesh objects
+        """
+
+        surf_dict = {}
+        for hemi in "lh", "rh":
+            surf_path = self.dirs["surf"] / f"std.141.{hemi}.pial.gii"
+            surf_dict[hemi.upper()] = surface.load_surf_mesh(str(surf_path))
+
+        return surf_dict

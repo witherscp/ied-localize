@@ -1,8 +1,10 @@
 from itertools import combinations, repeat
 from time import time
 
+from nilearn import surface
 import numpy as np
 import pandas as pd
+import pygeodesic.geodesic as geodesic
 
 from .colors import Colors
 from .constants import N_NODES, NUM_MAP
@@ -627,3 +629,23 @@ def extend_lst_of_lsts(lst_of_lsts):
         out_lst.append(lst)
 
     return out_lst
+
+
+def get_geodesic_dist(source_nodes, target_nodes, pial):
+    """Return the geodesic distances between source nodes and target nodes.
+
+    Args:
+        source_nodes (np.array): array of one or more source nodes
+        target_nodes (np.array): array of one or more target nodes
+        pial (nilearn.surface.surface.mesh): surface for given hemisphere, 
+            created using s.fetch_pial_surface_dict()[hemi]
+
+    Returns:
+        np.array: array of geodesic distances
+    """
+
+    # run pygeodesic to get geodesic distance between node and all other nodes
+    geoalg = geodesic.PyGeodesicAlgorithmExact(pial.coordinates, pial.faces)
+    distances, _ = geoalg.geodesicDistances(source_nodes, target_nodes)
+
+    return distances

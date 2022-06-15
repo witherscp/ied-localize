@@ -166,16 +166,18 @@ def barplot_annotate_brackets(
     """ 
     Annotate barplot with p-values.
 
-    :param num1: number of left bar to put bracket over
-    :param num2: number of right bar to put bracket over
-    :param data: string to write or number for generating asterixes
-    :param center: centers of all bars (like plt.bar() input)
-    :param height: heights of all bars (like plt.bar() input)
-    :param yerr: yerrs of all bars (like plt.bar() input)
-    :param dh: height offset over bar / bar + yerr in axes coordinates (0 to 1)
-    :param barh: bar height in axes coordinates (0 to 1)
-    :param fs: font size
-    :param maxasterix: maximum number of asterixes to write (for very small p-values)
+    Args:
+        num1: number of left bar to put bracket over
+        num2: number of right bar to put bracket over
+        data: string to write or number for generating asterixes
+        center: centers of all bars (like plt.bar() input)
+        height: heights of all bars (like plt.bar() input)
+        yerr: yerrs of all bars (like plt.bar() input)
+        dh: height offset over bar / bar + yerr in axes coordinates (0 to 1)
+        barh: bar height in axes coordinates (0 to 1)
+        fs: font size
+        maxasterix: maximum number of asterixes to write (for very small 
+            p-values)
     """
 
     if type(data) is str:
@@ -296,7 +298,7 @@ def array_to_niml(array, odir, fname):
     """
 
     # array must contain the same number of values as std.141 mesh
-    assert np.size(array) == 198812
+    assert np.size(array) == N_NODES
 
     # ensure that array is a column vector
     if array.ndim == 1:
@@ -389,14 +391,10 @@ def get_border_nodes(Subj, parcel):
     border_topo_parc_arr = topo_parc_arr[border_idx, :]
     border_topo_node_arr = topo_node_arr[border_idx, :]
 
-    # constrain parcel to range [1,n_parcs/2]
-    if parcel > (Subj.parcs // 2):
-        parcel -= Subj.parcs // 2
-
     # retrieve all nodes of given parcel in border rows
     nodes = np.unique(border_topo_node_arr[np.isin(border_topo_parc_arr, parcel)])
 
-    nodes_arr = np.zeros(198812)
+    nodes_arr = np.zeros(N_NODES)
     nodes_arr[nodes] = 1
 
     return nodes_arr

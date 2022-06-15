@@ -5,14 +5,18 @@ from sys import platform
 # set MAIN_DIR based on local system directory structure
 assert platform in "darwin", "linux"
 if platform == "darwin":
-    MAIN_DIR = Path("/Volumes/Shares/NEU/Projects")
+    NEU_DIR = Path("/Volumes/Shares/NEU")
 elif platform == "linux":
-    MAIN_DIR = Path("/shares/NEU/Projects")
+    NEU_DIR = Path("/shares/NEU")
+
+MAIN_DIR = NEU_DIR / "Projects"
+ODIR = NEU_DIR / "Users" / "price"
 
 data_directories = {
     "MRI_DIR": MAIN_DIR / "MRI",
     "DTI_DIR": MAIN_DIR / "DTI",
     "IED_DIR": MAIN_DIR / "iEEG" / "IED_data",
+    "IED_ANALYSIS_DIR": ODIR / "ied_analysis",
 }
 
 # propagation parameters
