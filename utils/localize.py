@@ -22,7 +22,7 @@ def lead_geodesic(
     maxBL,
     only_geo=False,
     only_wm=False,
-    n_steps=20,
+    n_steps=10,
     fixed_geo=False,
 ):
     """Localize the sources of a sequence based on the assumption that the lead
@@ -48,7 +48,7 @@ def lead_geodesic(
             (immediately returns []). Defaults to False.
         n_steps (int, optional): number of steps used in linspace; a larger 
             number will increase max/min range but slow down algorithm. 
-            Defaults to 20.
+            Defaults to 10.
         fixed_geo (bool, optional): require the same geodesic conduction 
             velocity in all directions. Defaults to False.
 
@@ -88,23 +88,34 @@ def lead_geodesic(
 
     # compute min/max velocity geo using equation from methods section
     # shape (n_steps, n_nodes, n_followers)
-    min_v_geo = (minGeo[:, f_elec_idxs] - l_geo_range) / lags
-    max_v_geo = (maxGeo[:, f_elec_idxs] - l_geo_range) / lags
-    min_v_geo, max_v_geo = constrain_velocities(min_v_geo, max_v_geo, is_geo=True)
+    if fixed_geo:
+        min_v_geo = (minGeo[:, f_elec_idxs] - l_geo_range) / lags
+        max_v_geo = (maxGeo[:, f_elec_idxs] - l_geo_range) / lags
+    else:
+        min_denom, max_denom = find_denom_range(
+            minGeo[:, f_elec_idxs], 
+            maxGeo[:, f_elec_idxs], 
+            MIN_GEO_VEL, 
+            MAX_GEO_VEL, 
+            lags, 
+            n_steps=n_steps
+        )
+        min_v_geo = l_geo_range / max_denom
+        max_v_geo = l_geo_range / min_denom
+    
+    min_v_geo, max_v_geo = constrain_velocities(
+        min_v_geo, 
+        max_v_geo, 
+        is_geo=True
+    )
 
     # check possibilities where followers are only geodesic
     if only_geo:
 
-        if fixed_geo:
-            # check for existence of overlapping range
-            largest_min_v = np.max(min_v_geo, axis=2)
-            smallest_max_v = np.min(max_v_geo, axis=2)
-            source_indices = np.unique(np.where(smallest_max_v > largest_min_v)[1])
-        else:
-            # check for nodes with all electrodes in velocity range
-            source_indices = np.unique(
-                np.where(np.all(max_v_geo > min_v_geo, axis=2))[1]
-            )
+        # check for existence of overlapping range
+        largest_min_v = np.max(min_v_geo, axis=-1)
+        smallest_max_v = np.min(max_v_geo, axis=-1)
+        source_indices = np.unique(np.where(smallest_max_v > largest_min_v)[1])
 
     # check possibilities where followers are geodesic or WM
     else:
@@ -133,19 +144,19 @@ def lead_geodesic(
         )
 
         # initialize n_node x n_elec arrays to store denominators
-        min_denom = np.full((N_NODES, n_followers), np.NaN)
-        max_denom = np.full((N_NODES, n_followers), np.NaN)
+        combo_min_denom = np.full((N_NODES, n_followers), np.NaN)
+        combo_max_denom = np.full((N_NODES, n_followers), np.NaN)
 
         # convert (n_parcs x n_elecs) to (n_nodes x n_elecs)
         for parc_idx in np.unique(np.where(~np.isnan(parc_min_denom))[0]):
             nodes = Subj.parc2node_dict[parc_idx + 1]
-            min_denom[nodes, :] = parc_min_denom[parc_idx, :]
-            max_denom[nodes, :] = parc_max_denom[parc_idx, :]
+            combo_min_denom[nodes, :] = parc_min_denom[parc_idx, :]
+            combo_max_denom[nodes, :] = parc_max_denom[parc_idx, :]
 
         # compute min/max velocity geo (combo method) using equations from
         # methods section
-        combo_min_v_geo = l_geo_range / max_denom
-        combo_max_v_geo = l_geo_range / min_denom
+        combo_min_v_geo = l_geo_range / combo_max_denom
+        combo_max_v_geo = l_geo_range / combo_min_denom
 
         (combo_min_v_geo, combo_max_v_geo) = constrain_velocities(
             combo_min_v_geo, combo_max_v_geo, is_geo=True
