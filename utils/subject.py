@@ -4,14 +4,16 @@ from glob import glob
 from math import isnan
 from warnings import filterwarnings
 
+filterwarnings("ignore", category=FutureWarning)
+filterwarnings(action="ignore", message="All-NaN slice encountered")
+
 import jaro
+from nilearn import surface
 import numpy as np
 import pandas as pd
 
 from .constants import *
 from .helpers import *
-
-filterwarnings(action="ignore", message="All-NaN slice encountered")
 
 
 class Subject:

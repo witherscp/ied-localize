@@ -23,7 +23,9 @@ if __name__ == "__main__":
         "--only_wm", action="store_true", help="use white matter localization only"
     )
     parser.add_argument(
-        "--fixed_geo", action="store_true", help="use white matter localization only"
+        "--fixed_geo",
+        action="store_true",
+        help="fix geodesic velocity in all directions",
     )
     parser.add_argument(
         "-p",
@@ -35,7 +37,7 @@ if __name__ == "__main__":
         "-n", "--num_network", default=17, help="Yeo network {7 or 17}; defaults to 17"
     )
     parser.add_argument(
-        "--dist", default=45, help="Geodesic max search distance; defaults to 45"
+        "--dist", default=45, help="geodesic max search distance; defaults to 45"
     )
     parser.add_argument(
         "-l", "--max_length", default=10, help="maximum allowable length of a sequence"

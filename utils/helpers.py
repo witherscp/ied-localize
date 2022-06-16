@@ -1,7 +1,6 @@
 from itertools import combinations, repeat
 from time import time
 
-from nilearn import surface
 import numpy as np
 import pandas as pd
 import pygeodesic.geodesic as geodesic
