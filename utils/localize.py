@@ -57,15 +57,19 @@ def lead_geodesic(
             lag times)
     """
 
-    # only_wm means do not attempt localization with geodesic
+    # only_wm means do not attempt localization with lead geodesic
     if only_wm:
         return []
 
-    l_hemi = hemis[0]
-
     # lead must always be in the same hemisphere as the cluster
+    l_hemi = hemis[0]
     if l_hemi != cluster_hemi:
         return []
+    else:
+        if cluster_hemi == "LH":
+            hemi_parc_idxs = np.arange(0, Subj.parcs // 2)
+        else:
+            hemi_parc_idxs = np.arange(Subj.parcs // 2, Subj.parcs)
 
     # if only geodesic allowed, check that all electrodes are in same
     # hemisphere as cluster
@@ -93,21 +97,18 @@ def lead_geodesic(
         max_v_geo = (maxGeo[:, f_elec_idxs] - l_geo_range) / lags
     else:
         min_denom, max_denom = find_denom_range(
-            minGeo[:, f_elec_idxs], 
-            maxGeo[:, f_elec_idxs], 
-            MIN_GEO_VEL, 
-            MAX_GEO_VEL, 
-            lags, 
-            n_steps=n_steps
+            minGeo[:, f_elec_idxs],
+            maxGeo[:, f_elec_idxs],
+            MIN_GEO_VEL,
+            MAX_GEO_VEL,
+            lags,
+            fixed_velocity=fixed_geo,
+            n_steps=n_steps,
         )
         min_v_geo = l_geo_range / max_denom
         max_v_geo = l_geo_range / min_denom
-    
-    min_v_geo, max_v_geo = constrain_velocities(
-        min_v_geo, 
-        max_v_geo, 
-        is_geo=True
-    )
+
+    min_v_geo, max_v_geo = constrain_velocities(min_v_geo, max_v_geo, is_geo=True)
 
     # check possibilities where followers are only geodesic
     if only_geo:
@@ -148,7 +149,8 @@ def lead_geodesic(
         combo_max_denom = np.full((N_NODES, n_followers), np.NaN)
 
         # convert (n_parcs x n_elecs) to (n_nodes x n_elecs)
-        for parc_idx in np.unique(np.where(~np.isnan(parc_min_denom))[0]):
+        connected_parc_idxs = np.unique(np.where(~np.isnan(parc_min_denom))[0])
+        for parc_idx in np.intersect1d(connected_parc_idxs, hemi_parc_idxs):
             nodes = Subj.parc2node_dict[parc_idx + 1]
             combo_min_denom[nodes, :] = parc_min_denom[parc_idx, :]
             combo_max_denom[nodes, :] = parc_max_denom[parc_idx, :]
@@ -179,23 +181,14 @@ def lead_geodesic(
             :, :, range(n_followers), list(product(range(2), repeat=n_followers)), :
         ]
 
-        if fixed_geo:
-            # find overlapping interval along axis=3 (electrodes)
-            # largest_min and smallest_max have shape (n_steps,N_NODES,2**n_elecs)
-            largest_min_v = np.max(shuffled[:, :, :, :, 0], axis=3)
-            smallest_max_v = np.min(shuffled[:, :, :, :, 1], axis=3)
+        # find overlapping interval along axis=3 (electrodes)
+        # largest_min and smallest_max have shape (n_steps,N_NODES,2**n_elecs)
+        largest_min_v = np.max(shuffled[:, :, :, :, 0], axis=3)
+        smallest_max_v = np.min(shuffled[:, :, :, :, 1], axis=3)
 
-            # find any combination that had an overlapping interval for a node
-            overlapping = np.any((smallest_max_v > largest_min_v), axis=(0, 2))
-            source_indices = np.where(overlapping)[0]
-        else:
-            # check for nodes with all electrodes in velocity range
-            source_indices = np.where(
-                np.any(
-                    np.all(shuffled[:, :, :, :, 1] > shuffled[:, :, :, :, 0], axis=3),
-                    axis=(0, 2),
-                )
-            )[0]
+        # find any combination that had an overlapping interval for a node
+        overlapping = np.any((smallest_max_v > largest_min_v), axis=(0, 2))
+        source_indices = np.where(overlapping)[0]
 
     # convert indices to parcels
     if source_indices.size == 0:
@@ -224,7 +217,6 @@ def lead_wm(
     parcel numbers.
 
     Args:
-        Subj (Subject): instance of Subject class
         elec_idxs (np.array): array of electrode indices (for indexing min/max 
             parc geodesic arrays)
         parc_idxs (list): list of parcel index lists associated with elecs
