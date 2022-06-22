@@ -763,8 +763,6 @@ class Subject:
         for parcel in parcels:
 
             hemi = get_parcel_hemi(parcel, self.parcs)
-            if hemi == "RH":
-                parcel -= int(self.parcs / 2)
 
             # get hemi_specific df
             hemi_node2rsxn = self.node2rsxn_df_dict[hemi]
