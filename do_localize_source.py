@@ -1,6 +1,8 @@
 from argparse import ArgumentParser
 from warnings import filterwarnings
 
+from utils.constants import INTRAPARCEL_DISTS
+
 filterwarnings("ignore", category=RuntimeWarning)
 
 from ied_repo.analysis import *
@@ -71,7 +73,7 @@ if __name__ == "__main__":
     odir.mkdir(parents=True, exist_ok=True)
 
     minBL, maxBL, minGeo, maxGeo = s.fetch_minmax_distances()
-    maxBL[np.diag_indices_from(maxBL)] = 25
+    maxBL[np.diag_indices_from(maxBL)] = INTRAPARCEL_DISTS[n_parcs]
 
     parc_minGeo, parc_maxGeo = convert_geo_arrays(s, minGeo, maxGeo)
 
