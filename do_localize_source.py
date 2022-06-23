@@ -31,12 +31,12 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "-p",
-        "--num_parc",
+        "--parcs",
         default=600,
         help=("number of parcels to use to generate FC matrix;" " defaults to 600"),
     )
     parser.add_argument(
-        "-n", "--num_network", default=17, help="Yeo network {7 or 17}; defaults to 17"
+        "-n", "--networks", default=17, help="Yeo network {7 or 17}; defaults to 17"
     )
     parser.add_argument(
         "--dist", default=45, help="geodesic max search distance; defaults to 45"
@@ -47,8 +47,8 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     subj = args.subj
-    n_parcs = int(args.num_parc)
-    n_network = int(args.num_network)
+    n_parcs = int(args.parcs)
+    n_networks = int(args.networks)
     dist = int(args.dist)
     max_length = int(args.max_length)
     only_geo = args.only_geo
@@ -68,7 +68,7 @@ if __name__ == "__main__":
         file_str = ""
         print_str = "combination"
 
-    s = Subject(subj, in_progress=True)
+    s = Subject(subj, n_parcs=n_parcs, n_networks=n_networks, n_progress=True)
     odir = s.dirs["source_loc"]
     odir.mkdir(parents=True, exist_ok=True)
 
