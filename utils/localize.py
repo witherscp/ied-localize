@@ -318,7 +318,7 @@ def lead_wm(
             largest_min_v = np.max(min_v_wm, axis=-1)
             smallest_max_v = np.min(max_v_wm, axis=-1)
             source_parcs = source_parcs.union(
-                set(np.where(smallest_max_v > largest_min_v)[0])
+                set(np.where(smallest_max_v > largest_min_v)[1])
             )
 
         # check possibilities where followers are WM or geodesic
