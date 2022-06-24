@@ -91,6 +91,7 @@ class Subject:
             self._update_engel_class()
             if self.engel_class not in ("no_resection", "no_outcome", "deceased"):
                 self.node2rsxn_df_dict = self._fetch_node2rsxn_df_dict()
+                self.resection_thresh = self._fetch_resection_thresh()
 
     def _update_ied_subdirs(self):
         """Add IED subdirectories."""
@@ -225,6 +226,20 @@ class Subject:
             "delaySequences_withParc_max" f"{self.seq_len}{suffix}.csv"
         )
         np.savetxt(out_fpath, X=new_delays_arr, delimiter=",")
+
+    def _fetch_resection_thresh(self):
+        """Fetch the proportion of a parcel resected threshold. 0.5 unless the 
+        subject has no parcels half-resected, in which case this will return 
+        the maximum.
+
+        Returns:
+            float: 0.5 or max(all_resected_proportions); whichever is smallest
+        """
+
+        resection_props = np.array(self.compute_resected_prop(range(1, self.parcs + 1)))
+
+        # account for parcels with no parcels > 0.5 resected
+        return min(max(resection_props), 0.5)
 
     def _fetch_parc_minEuclidean_byElec(self):
         """Fetch array of minimum Euclidean distances between parcels and
