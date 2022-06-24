@@ -82,7 +82,7 @@ def convert_parcs(parc_str):
     """
 
     lst_str = parc_str.strip("][").split(", ")
-    return map_func(lst_str, no_index=False)
+    return map_func(lst_str, no_index=True)
 
 
 def convert_lobes(lobe_str):
