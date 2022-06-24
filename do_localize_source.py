@@ -68,7 +68,7 @@ if __name__ == "__main__":
         file_str = ""
         print_str = "combination"
 
-    s = Subject(subj, n_parcs=n_parcs, n_networks=n_networks, n_progress=True)
+    s = Subject(subj, n_parcs=n_parcs, n_networks=n_networks, in_progress=True)
     odir = s.dirs["source_loc"]
     odir.mkdir(parents=True, exist_ok=True)
 
