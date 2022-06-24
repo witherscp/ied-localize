@@ -15,7 +15,7 @@ ODIR = NEU_DIR / "Users" / "price"
 data_directories = {
     "MRI_DIR": MAIN_DIR / "MRI",
     "DTI_DIR": MAIN_DIR / "DTI",
-    "IED_DIR": MAIN_DIR / "iEEG" / "IED_data",
+    "IED_DIR": MAIN_DIR / "iEEG" / "IED_data_fixedGeo",
     "IED_ANALYSIS_DIR": ODIR / "ied_analysis",
 }
 
@@ -26,8 +26,7 @@ MAX_GEO_VEL = 0.45
 MIN_GEO_VEL = 0.25
 
 # intraparcel distance dictionary
-INTRAPARCEL_DISTS = {400: 36,
-                     600: 27}
+INTRAPARCEL_DISTS = {200: 46, 400: 36, 600: 27}
 
 # number of nodes on std.141 mesh
 N_NODES = 198812
