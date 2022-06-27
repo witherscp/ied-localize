@@ -15,13 +15,13 @@ ODIR = NEU_DIR / "Users" / "price"
 data_directories = {
     "MRI_DIR": MAIN_DIR / "MRI",
     "DTI_DIR": MAIN_DIR / "DTI",
-    "IED_DIR": MAIN_DIR / "iEEG" / "IED_data_fixedGeo",
+    "IED_DIR": MAIN_DIR / "iEEG" / "IED_data",
     "IED_ANALYSIS_DIR": ODIR / "ied_analysis",
 }
 
 # propagation parameters
-MAX_WM_VEL = 3
-MIN_WM_VEL = 1.2
+MAX_WM_VEL = 5.3
+MIN_WM_VEL = 1.7
 MAX_GEO_VEL = 0.45
 MIN_GEO_VEL = 0.25
 
