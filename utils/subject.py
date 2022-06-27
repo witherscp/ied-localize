@@ -944,7 +944,7 @@ class Subject:
         if source == None:
             source = list(self.valid_sources_one[cluster])[0]
         else:
-            assert source in range(self.parcs)
+            assert source in range(1, self.parcs + 1)
 
         seqs, delays = self.fetch_sequences(cluster=cluster)
 
