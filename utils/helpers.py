@@ -416,6 +416,9 @@ def retrieve_delays(delays, seq_idxs, include_zero=False):
         np.array: array of lag times for indexed sequences
     """
 
+    if seq_idxs.size == 0:
+        return np.array(())
+
     indexed_delays = delays[seq_idxs]
 
     if include_zero:
