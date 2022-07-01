@@ -27,7 +27,7 @@ class Subject:
         use_weighted=True,
         use_best=True,
         in_progress=False,
-        cutoff=0.5,
+        cutoff=0.0,
     ):
         """Create an instance of Subject for analysis of IED spike data
 
@@ -81,6 +81,7 @@ class Subject:
         self._update_num_clusters()
         self._update_cluster_num_sequences()
         self._update_cluster_hemispheres()
+        self._update_engel_class()
 
         # if localized, update additional attributes
         if not in_progress:
@@ -88,7 +89,6 @@ class Subject:
             self._update_source_parcels(
                 dist=dist, use_weighted=use_weighted, use_best=use_best, cutoff=cutoff
             )
-            self._update_engel_class()
             if self.engel_class not in ("no_resection", "no_outcome", "deceased"):
                 self.node2rsxn_df_dict = self._fetch_node2rsxn_df_dict()
                 self.resection_thresh = self._fetch_resection_thresh()
