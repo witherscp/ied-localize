@@ -3,7 +3,7 @@ from pathlib import Path
 from sys import platform
 
 # set MAIN_DIR based on local system directory structure
-assert platform in "darwin", "linux"
+assert platform in ["darwin", "linux"]
 if platform == "darwin":
     NEU_DIR = Path("/Volumes/Shares/NEU")
 elif platform == "linux":
