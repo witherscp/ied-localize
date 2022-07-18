@@ -257,7 +257,7 @@ def get_electrode_node_arr(
     all_rai_coords = np.loadtxt(rai_coords_file)[:, :-1]
 
     if is_sequence:
-        elec_idxs = np.array([Subj.get_elec_idx(elec) for elec in elecs])
+        elec_idxs = np.array([Subj.elec2index_dict[elec] for elec in elecs])
         rai_coords = all_rai_coords[elec_idxs, :]
     else:
         # get all electrodes in gray matter
