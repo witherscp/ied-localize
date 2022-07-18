@@ -1,7 +1,10 @@
 """Subject class"""
 
 from glob import glob
+from io import StringIO
 from math import isnan
+import shlex
+import subprocess
 from warnings import filterwarnings
 
 filterwarnings("ignore", category=FutureWarning)
@@ -11,6 +14,7 @@ import jaro
 from nilearn import surface
 import numpy as np
 import pandas as pd
+from scipy.spatial import distance_matrix
 
 from .constants import *
 from .helpers import *
@@ -33,21 +37,21 @@ class Subject:
 
         Args:
             subj (str): subject p-number
-            n_parcs (int, optional): Schaefer parcellation number. Defaults to 
+            n_parcs (int, optional): Schaefer parcellation number. Defaults to
                 600.
-            n_networks (int, optional): Schaefer networks number. Defaults to 
+            n_networks (int, optional): Schaefer networks number. Defaults to
                 17.
-            max_length (int, optional): Max length of sequences detected. 
+            max_length (int, optional): Max length of sequences detected.
                 Defaults to 10.
-            dist (int, optional): Max geodesic search distance for 
+            dist (int, optional): Max geodesic search distance for
                 localization. Defaults to 45.
-            use_weighted (bool, optional): For narrowing down sources from all 
-                to one, weight all lead electrodes rather than taking the most 
+            use_weighted (bool, optional): For narrowing down sources from all
+                to one, weight all lead electrodes rather than taking the most
                 frequent. Defaults to True.
-            use_best (bool, optional): For narrowing down sources from all 
-                to one, only compare the parcels tied for highest proportion 
+            use_best (bool, optional): For narrowing down sources from all
+                to one, only compare the parcels tied for highest proportion
                 explained (don't consider the top 5%). Defaults to True.
-            cutoff (float, optional): the minimum proportion of sequences 
+            cutoff (float, optional): the minimum proportion of sequences
                 explained for a cluster to be considered localized. Defaults to
                 0.5.
         """
@@ -121,7 +125,7 @@ class Subject:
 
     def _fetch_elec_euc_arr(self):
         """Fetch elec_euc_arr to store as self.elec_euc_arr.
-        
+
         Returns:
             np.array: n_elec x n_elec array of Euclidean distances
         """
@@ -174,7 +178,7 @@ class Subject:
         return seqs, delays
 
     def _remove_noparcel_elecs(self, cluster):
-        """Save sequences without elecs that have no parcels because they were 
+        """Save sequences without elecs that have no parcels because they were
         not used for source localization and should be ignored for analysis.
 
         Args:
@@ -228,8 +232,8 @@ class Subject:
         np.savetxt(out_fpath, X=new_delays_arr, delimiter=",")
 
     def _fetch_resection_thresh(self):
-        """Fetch the proportion of a parcel resected threshold. 0.5 unless the 
-        subject has no parcels half-resected, in which case this will return 
+        """Fetch the proportion of a parcel resected threshold. 0.5 unless the
+        subject has no parcels half-resected, in which case this will return
         the maximum.
 
         Returns:
@@ -414,7 +418,7 @@ class Subject:
         return df.set_index("parcNumber")
 
     def _fetch_node2rsxn_df_dict(self):
-        """Create dictionary of node to resection lookup tables for each 
+        """Create dictionary of node to resection lookup tables for each
         hemisphere.
 
         Returns:
@@ -600,13 +604,13 @@ class Subject:
 
         Args:
             dist (int, optional): geodesic search distance. Defaults to 45.
-            use_weighted (bool, optional): For narrowing down sources from all 
-                to one, weight all lead electrodes rather than taking the most 
+            use_weighted (bool, optional): For narrowing down sources from all
+                to one, weight all lead electrodes rather than taking the most
                 frequent. Defaults to True.
-            use_best (bool, optional): For narrowing down sources from all 
-                to one, only compare the parcels tied for highest proportion 
+            use_best (bool, optional): For narrowing down sources from all
+                to one, only compare the parcels tied for highest proportion
                 explained (don't consider the top 5%). Defaults to True.
-            cutoff (float, optional): the minimum proportion of sequences 
+            cutoff (float, optional): the minimum proportion of sequences
                 explained for a cluster to be considered localized. Defaults to
                 0.5.
         """
@@ -791,13 +795,15 @@ class Subject:
 
         return resected_props
 
-    def compute_rsxn_source_arr(self, n_cluster, all_sources=False, source=None):
+    def compute_rsxn_source_arr(self, n_cluster, source=None,  all_sources=False, rsxn_only=False, source_only=False):
         """Create n_node array with a gray resection zone and green TN/TP
         regions or red FN/FP parcels.
 
         Args:
             n_cluster (int): cluster number
-            all_sources (bool, optional): plot every possible source 
+            source (int): source parcel in range(1, n_parcs+1). Defaults to
+                None which selects the combination source.
+            all_sources (bool, optional): plot every possible source
                 (not just the single best source). Defaults to False.
 
         Returns:
@@ -822,6 +828,11 @@ class Subject:
             .copy()
         )
 
+        if rsxn_only:
+            return rsxn_arr, hemi
+        elif source_only:
+            rsxn_arr[:] = 0
+
         # get resection props
         rsxn_props = self.compute_resected_prop(sources)
 
@@ -832,9 +843,9 @@ class Subject:
             accuracy = get_prediction_accuracy(self.engel_class, rsxn_prop)
 
             # set values depending on concordance
-            if accuracy.startswith("T"):
+            if accuracy in ["TP", "FP"]:
                 rsxn_arr[mask] = 2.6
-            elif accuracy.startswith("F"):
+            elif accuracy in ["TN", "FN"]:
                 rsxn_arr[mask] = 4
 
         return rsxn_arr, hemi
@@ -850,11 +861,11 @@ class Subject:
             source (int): source parcel
             only_geo (bool, optional): Use geodesic only localization method.
                 Defaults to False.
-            only_wm (bool, optional): Use white matter only localization 
+            only_wm (bool, optional): Use white matter only localization
                 method. Defaults to False.
 
         Returns:
-            np.array: array of indices for which the sequences localize to a 
+            np.array: array of indices for which the sequences localize to a
                 given source (find the sequences with seqs[seq_indices])
         """
 
@@ -927,14 +938,14 @@ class Subject:
 
         Args:
             cluster (int): cluster number
-            source (int, optional): source parcel (uses valid_source_one if 
+            source (int, optional): source parcel (uses valid_source_one if
                 None). Defaults to None.
-            lead_only (bool, optional): only use weighted distances to lead 
+            lead_only (bool, optional): only use weighted distances to lead
                 electrodes. Defaults to False.
-            use_geo (bool, optional): find weighted geodesic distance, not 
+            use_geo (bool, optional): find weighted geodesic distance, not
                 Euclidean. Defaults to False.
-            use_all_seqs (bool, optional): use every sequence of the cluster, 
-                not just localizing sequences based on the source parcel using 
+            use_all_seqs (bool, optional): use every sequence of the cluster,
+                not just localizing sequences based on the source parcel using
                 combination method. Defaults to False.
 
         Returns:
@@ -996,7 +1007,7 @@ class Subject:
     def compute_farthest_elec_dists(
         self, cluster, seq_indices=None, source=None, use_geo=True
     ):
-        """Return an array of distances to the farthest electrode in each 
+        """Return an array of distances to the farthest electrode in each
         sequence. Hypothesis is that sequences requiring white matter will have
         a higher proportion of distant electrodes, especially beyond 45 mm.
 
@@ -1004,18 +1015,18 @@ class Subject:
             cluster (int): cluster number
             seq_indices (np.array): array of sequence indices. Defaults to None.
             source (int, optional): source parcel number. Defaults to None.
-            use_geo (bool, optional): Use geodesic distance, otherwise 
+            use_geo (bool, optional): Use geodesic distance, otherwise
                 Euclidean is used. Defaults to True.
 
         Returns:
-            np.array: array of maximum distances from parcel to farthest 
+            np.array: array of maximum distances from parcel to farthest
                 electrode
         """
 
         if source is None:
             source = list(self.valid_sources_one[cluster])[0]
         else:
-            assert source in range(self.parcs)
+            assert source in range(1,self.parcs+1)
 
         seqs, _ = self.fetch_sequences(cluster=cluster)
 
@@ -1057,10 +1068,10 @@ class Subject:
 
         return max_dists
 
-    def compute_jaro_similarities(self, cluster):
-        """Compute a Jaro-Winkler similarity matrix based on an array of 
+    def _compute_jaro_similarities(self, cluster):
+        """Compute a Jaro-Winkler similarity matrix based on an array of
         electrode sequences. Saves out the matrix for future usage.
-        
+
         Args:
             cluster (int): cluster number
 
@@ -1115,12 +1126,12 @@ class Subject:
         if fpath.exists():
             similarities_arr = np.loadtxt(fpath, dtype=float, delimiter=",")
         else:
-            similarities_arr = self.compute_jaro_similarities(cluster)
+            similarities_arr = self._compute_jaro_similarities(cluster)
 
         return similarities_arr
 
     def compute_proportion_neighbors(self, cluster, neighbor_thresh=12.0):
-        """Compute the average proportion of neighbor electrodes included 
+        """Compute the average proportion of neighbor electrodes included
         within sequences in a cluster. Hypothesis is that a greater proportion
         correlates with being closer to epileptogenic zone.
 
@@ -1158,17 +1169,17 @@ class Subject:
     def compute_closest_elec_metrics(
         self, cluster, seq_indices=None, source=None, use_geo=True
     ):
-        """Return arrays filled with the position, distance, and lag time of 
-        the closest electrode to the source for every sequence. Hypothesis is 
-        that sequences requiring white matter will allow for electrodes firing 
+        """Return arrays filled with the position, distance, and lag time of
+        the closest electrode to the source for every sequence. Hypothesis is
+        that sequences requiring white matter will allow for electrodes firing
         later to be closer.
 
         Args:
             cluster (int): cluster number
-            seq_indices (np.array): array of sequence indices. Defaults to 
+            seq_indices (np.array): array of sequence indices. Defaults to
                 None.
             source (int, optional): source parcel number. Defaults to None.
-            use_geo (bool, optional): Use geodesic distance, otherwise 
+            use_geo (bool, optional): Use geodesic distance, otherwise
                 Euclidean is used. Defaults to True.
 
         Returns:
@@ -1180,7 +1191,7 @@ class Subject:
         if source == None:
             source = list(self.valid_sources_one[cluster])[0]
         else:
-            assert source in range(self.parcs)
+            assert source in range(1,self.parcs+1)
 
         seqs, delays = self.fetch_sequences(cluster=cluster)
 
@@ -1232,26 +1243,26 @@ class Subject:
     def compute_all_elec_dists(
         self, cluster, seq_indices=None, source=None, use_geo=True
     ):
-        """Return an array of distances to all electrodes in each sequence. 
+        """Return an array of distances to all electrodes in each sequence.
 
         Args:
             cluster (int): cluster number
-            seq_indices (np.array): array of sequence indices. Defaults to all 
+            seq_indices (np.array): array of sequence indices. Defaults to all
                 sequences.
-            source (int, optional): source parcel number. Defaults to cluster 
+            source (int, optional): source parcel number. Defaults to cluster
                 valid source one.
-            use_geo (bool, optional): Use geodesic distance, otherwise 
+            use_geo (bool, optional): Use geodesic distance, otherwise
                 Euclidean is used. Defaults to True.
 
         Returns:
-            np.array: array of maximum distances from parcel to farthest 
+            np.array: array of maximum distances from parcel to farthest
                 electrode
         """
 
         if source is None:
             source = list(self.valid_sources_one[cluster])[0]
         else:
-            assert source in range(self.parcs)
+            assert source in range(1,self.parcs+1)
 
         seqs, _ = self.fetch_sequences(cluster=cluster)
 
@@ -1335,7 +1346,7 @@ class Subject:
         """Fetch hemi dictionary of pial surface mesh objects.
 
         Returns:
-            dict: keys = ["LH","RH"], 
+            dict: keys = ["LH","RH"],
                   values = nilearn.surface.surface.mesh objects
         """
 
@@ -1345,3 +1356,49 @@ class Subject:
             surf_dict[hemi.upper()] = surface.load_surf_mesh(str(surf_path))
 
         return surf_dict
+
+    def _compute_parc_dist_matrix(self):
+        """Compute n_parcs x n_parcs matrix of Euclidean distances, when the
+        file has not been saved previously.
+
+        Returns:
+            np.array: n_parcs x n_parcs distance array
+        """
+
+        fpath = self.dirs["dti"] / 'roi' / (f"indt_std.141.both.Schaefer2018_"
+                                            f"{self.parcs}Parcels_"
+                                            f"{self.networks}Networks_FINAL.ni"
+                                            "i.gz")
+
+        # run AFNI 3dCM command to find center of mass of parcels
+        afni_cmd = shlex.split(f"3dCM -all_rois {fpath}")
+        process = subprocess.run(
+            afni_cmd, stdout=subprocess.PIPE, universal_newlines=True
+        )
+
+        # skip first row (zero parcel)
+        parc_centers = np.genfromtxt(StringIO(process.stdout))[1:]
+
+        parc_dists = distance_matrix(parc_centers, parc_centers)
+
+        opath = self.dirs['sc'] / "parc_euc_dists.csv"
+        np.savetxt(opath, X=parc_dists, fmt="%.3f", delimiter=",")
+
+        return parc_dists
+
+    def retrieve_parc_dist_matrix(self):
+        """Retrieve n_parcs x n_parcs matrix of Euclidean distances between
+        ROI center of masses.
+
+        Returns:
+            np.array: n_parcs x n_parcs distance array
+        """
+
+        fpath = self.dirs["sc"] / "parc_euc_dists.csv"
+
+        if fpath.exists():
+            parc_dists = np.loadtxt(fpath, dtype=float, delimiter=",")
+        else:
+            parc_dists = self._compute_parc_dist_matrix()
+
+        return parc_dists
