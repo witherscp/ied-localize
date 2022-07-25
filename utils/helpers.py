@@ -264,7 +264,9 @@ def compute_node2prop_arr(parc2prop_df, parc2node_dict, n_parcs, hemi=None):
 
     Args:
         parc2prop_df (pd.DataFrame): parcel to proportion dataframe
-        node2parc_df_dict (dict): dictionary of node to parcel dataframes
+        parc2node_dict (dict): keys = parcel number, 
+            values = list of nodes in given parcel
+        n_parcs (int): number of parcels (use s.parcs)
         hemi (str, optional): hemisphere; if set to None, will choose the 
             hemisphere of maximal proportion. Defaults to None.
 
@@ -276,10 +278,16 @@ def compute_node2prop_arr(parc2prop_df, parc2node_dict, n_parcs, hemi=None):
         # find hemisphere of maximal parcel
         if parc2prop_df["propExplanatorySpikes"].idxmax() < (len(parc2prop_df) // 2):
             hemi = "LH"
-            parc_range = range(1, (n_parcs // 2) + 1)
         else:
             hemi = "RH"
-            parc_range = range((n_parcs // 2) + 1, n_parcs + 1)
+            
+    assert hemi in ["LH", "RH"]
+    
+    if hemi == "LH":
+        parc_range = range(1, (n_parcs // 2) + 1)
+    elif hemi == "RH":
+        parc_range = range((n_parcs // 2) + 1, n_parcs + 1)
+        
 
     # initialize empty proportion array
     node2prop_arr = np.zeros(N_NODES)
