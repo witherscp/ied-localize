@@ -795,7 +795,14 @@ class Subject:
 
         return resected_props
 
-    def compute_rsxn_source_arr(self, n_cluster, source=None,  all_sources=False, rsxn_only=False, source_only=False):
+    def compute_rsxn_source_arr(
+        self,
+        n_cluster,
+        source=None,
+        all_sources=False,
+        rsxn_only=False,
+        source_only=False,
+    ):
         """Create n_node array with a gray resection zone and green TN/TP
         regions or red FN/FP parcels.
 
@@ -1026,7 +1033,7 @@ class Subject:
         if source is None:
             source = list(self.valid_sources_one[cluster])[0]
         else:
-            assert source in range(1,self.parcs+1)
+            assert source in range(1, self.parcs + 1)
 
         seqs, _ = self.fetch_sequences(cluster=cluster)
 
@@ -1191,7 +1198,7 @@ class Subject:
         if source == None:
             source = list(self.valid_sources_one[cluster])[0]
         else:
-            assert source in range(1,self.parcs+1)
+            assert source in range(1, self.parcs + 1)
 
         seqs, delays = self.fetch_sequences(cluster=cluster)
 
@@ -1262,7 +1269,7 @@ class Subject:
         if source is None:
             source = list(self.valid_sources_one[cluster])[0]
         else:
-            assert source in range(1,self.parcs+1)
+            assert source in range(1, self.parcs + 1)
 
         seqs, _ = self.fetch_sequences(cluster=cluster)
 
@@ -1365,10 +1372,16 @@ class Subject:
             np.array: n_parcs x n_parcs distance array
         """
 
-        fpath = self.dirs["dti"] / 'roi' / (f"indt_std.141.both.Schaefer2018_"
-                                            f"{self.parcs}Parcels_"
-                                            f"{self.networks}Networks_FINAL.ni"
-                                            "i.gz")
+        fpath = (
+            self.dirs["dti"]
+            / "roi"
+            / (
+                f"indt_std.141.both.Schaefer2018_"
+                f"{self.parcs}Parcels_"
+                f"{self.networks}Networks_FINAL.ni"
+                "i.gz"
+            )
+        )
 
         # run AFNI 3dCM command to find center of mass of parcels
         afni_cmd = shlex.split(f"3dCM -all_rois {fpath}")
@@ -1381,7 +1394,7 @@ class Subject:
 
         parc_dists = distance_matrix(parc_centers, parc_centers)
 
-        opath = self.dirs['sc'] / "parc_euc_dists.csv"
+        opath = self.dirs["sc"] / "parc_euc_dists.csv"
         np.savetxt(opath, X=parc_dists, fmt="%.3f", delimiter=",")
 
         return parc_dists

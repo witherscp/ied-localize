@@ -280,14 +280,13 @@ def compute_node2prop_arr(parc2prop_df, parc2node_dict, n_parcs, hemi=None):
             hemi = "LH"
         else:
             hemi = "RH"
-            
+
     assert hemi in ["LH", "RH"]
-    
+
     if hemi == "LH":
         parc_range = range(1, (n_parcs // 2) + 1)
     elif hemi == "RH":
         parc_range = range((n_parcs // 2) + 1, n_parcs + 1)
-        
 
     # initialize empty proportion array
     node2prop_arr = np.zeros(N_NODES)
