@@ -1,3 +1,3 @@
-"""Analysis tools: plotters, ..."""
+"""Analysis tools: plotters"""
 
 from .plotter import *

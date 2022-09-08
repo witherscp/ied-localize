@@ -16,7 +16,7 @@ import numpy as np
 import pandas as pd
 from scipy.spatial import distance_matrix
 
-from .constants import *
+from .constants import data_directories, MIN_GM_VEL, MAX_GM_VEL, MIN_WM_VEL, MAX_WM_VEL
 from .helpers import *
 
 
@@ -30,8 +30,8 @@ class Subject:
         dist=45,
         use_weighted=True,
         use_best=True,
-        in_progress=False,
         cutoff=0.0,
+        in_progress=False,
     ):
         """Create an instance of Subject for analysis of IED spike data
 
@@ -54,6 +54,9 @@ class Subject:
             cutoff (float, optional): the minimum proportion of sequences
                 explained for a cluster to be considered localized. Defaults to
                 0.5.
+            in_progress (bool, optional): Subject still needs to be localized; 
+                do not initialize attributes that have not been created yet. 
+                Defaults to False.
         """
 
         # set values
@@ -135,47 +138,6 @@ class Subject:
         arr[np.diag_indices_from(arr)] = np.NaN
 
         return arr
-
-    def fetch_sequences(self, cluster=None, all_elecs=False):
-        """Fetch electrode sequences and lag times once they have been saved
-        as .csv files in self.dirs['seqs'].
-
-        Args:
-            cluster (int, optional): cluster of interest. Defaults to None.
-            all_elecs (bool, optional): include elecs without parcels. Defaults
-                to False
-
-        Returns:
-            seqs, delays: np.array of electrode names and np.array of delay
-                times for every sequence
-        """
-
-        assert isinstance(cluster, (int, type(None)))
-
-        suffix = ""
-        if isinstance(cluster, int):
-            suffix = f"_cluster{cluster}"
-
-        noparc_str = "_withParc"
-        if all_elecs:
-            noparc_str = ""
-
-        seqs_file = self.dirs["seqs"] / (
-            f"elecSequences{noparc_str}_max" f"{self.seq_len}{suffix}.csv"
-        )
-
-        if not seqs_file.exists():
-            # remove all electrodes without parcels from sequences
-            self._remove_noparcel_elecs(cluster)
-
-        seqs = np.loadtxt(seqs_file, dtype=str, delimiter=",")
-
-        delays_file = self.dirs["seqs"] / (
-            f"delaySequences{noparc_str}_max" f"{self.seq_len}{suffix}.csv"
-        )
-        delays = np.loadtxt(delays_file, dtype=float, delimiter=",")
-
-        return seqs, delays
 
     def _remove_noparcel_elecs(self, cluster):
         """Save sequences without elecs that have no parcels because they were
@@ -368,55 +330,6 @@ class Subject:
         df["index"] = df.index
         return df.set_index("chanName").to_dict()["index"]
 
-    def fetch_normalized_parc2prop_df(
-        self, cluster, dist=45, only_geo=False, only_wm=False
-    ):
-        """Fetch df with conversion table of parcel number to proportion of
-        sequences explained.
-
-        Args:
-            cluster (int): number of cluster
-            dist (int, optional): Geodesic search distance in mm. Defaults to
-                45.
-            only_geo (bool, optional): Use geodesic only method. Defaults to
-                False.
-            only_wm (bool, optional): Use white matter only method. Defaults to
-                False.
-
-        Returns:
-            pd.DataFrame: dataframe with index as parcel number and column as
-                'propExplanatorySpikes'
-        """
-
-        # if not using combination method, only one input can be set to True
-        assert not (only_geo and only_wm)
-
-        method = ""
-        if only_geo:
-            method = "_geodesic"
-        elif only_wm:
-            method = "_whiteMatter"
-
-        fname = (
-            f"*{method}_normalizedCounts_within{dist}_max{self.seq_len}"
-            f"_cluster{cluster}.csv"
-        )
-        fpath_lst = glob(str(self.dirs["source_loc"] / fname))
-
-        if not (only_geo or only_wm):
-            for fpath in fpath_lst:
-                if ("whiteMatter" in fpath) or ("geodesic" in fpath):
-                    continue
-                else:
-                    parc2prop_path = fpath
-                    break
-        else:
-            parc2prop_path = fpath_lst[0]
-
-        df = pd.read_csv(parc2prop_path)
-
-        return df.set_index("parcNumber")
-
     def _fetch_node2rsxn_df_dict(self):
         """Create dictionary of node to resection lookup tables for each
         hemisphere.
@@ -439,71 +352,6 @@ class Subject:
             node2rsxn_df_dict[hemi] = node2rsxn_df
 
         return node2rsxn_df_dict
-
-    def fetch_geodesic_travel_times(self):
-        """Fetch geodesic travel times based on geodesic velocities and
-        distances from electrodes to nodes on the std.141 mesh.
-
-        Returns:
-            tuple: minGeo_maxSpeed_time, minGeo_minSpeed_time,
-                maxGeo_minSpeed_time, maxGeo_maxSpeed_time (four np.arrays
-                with shape (n_nodes, n_elecs))
-        """
-
-        # load and compute estimated lag times based on Geodesic distances
-
-        fdir = self.dirs["sc"]
-        temp_minGeo = pd.read_csv((fdir / "node_minGeo_byElec.csv"), header=None)
-        temp_maxGeo = pd.read_csv((fdir / "node_maxGeo_byElec.csv"), header=None)
-
-        minGeo = temp_minGeo.to_numpy(copy=True)
-        maxGeo = temp_maxGeo.to_numpy(copy=True)
-
-        # set all minimum values > dist to np.NaN and all max values to dist that
-        # have a min value less than dist
-        minGeo[minGeo > self.dist] = np.NaN
-        maxGeo[np.isnan(minGeo)] = np.NaN
-        maxGeo[maxGeo > self.dist] = self.dist
-
-        minGeo_maxSpeed_time = minGeo / MAX_GEO_VEL
-        minGeo_minSpeed_time = minGeo / MIN_GEO_VEL
-        maxGeo_minSpeed_time = maxGeo / MIN_GEO_VEL
-        maxGeo_maxSpeed_time = maxGeo / MAX_GEO_VEL
-
-        return (
-            minGeo_maxSpeed_time,
-            minGeo_minSpeed_time,
-            maxGeo_minSpeed_time,
-            maxGeo_maxSpeed_time,
-        )
-
-    def fetch_wm_travel_times(self):
-        """Fetch white matter min/max BL times.
-
-        Returns:
-            tuple: minBL_time, maxBL_time (np.arrays of shape
-                (n_parcs, n_parcs))
-        """
-
-        # load and compute estimated lag times based on WM bundle lengths
-        fdir = self.dirs["sc"]
-        BL = np.loadtxt((fdir / "BL.csv"), delimiter=",", dtype=float)
-        sBL = np.loadtxt((fdir / "sBL.csv"), delimiter=",", dtype=float)
-
-        BL[BL == 0] = np.nan
-        sBL[sBL == 0] = np.nan
-
-        maxBL = BL + sBL
-        minBL = BL - sBL
-        if minBL[minBL < 0].size > 0:
-            minBL[minBL < 0] = 0
-
-        maxBL_time = maxBL / MIN_WM_VEL
-        minBL_time = minBL / MAX_WM_VEL
-        minBL_time[np.diag_indices_from(minBL_time)] = 0
-        maxBL_time[np.diag_indices_from(maxBL_time)] = 20
-
-        return minBL_time, maxBL_time
 
     def _update_num_clusters(self):
         """Update self.num_clusters value."""
@@ -725,6 +573,234 @@ class Subject:
         self.engel_class = engel_class
         self.engel_months = engel_months
 
+    def _compute_jaro_similarities(self, cluster):
+        """Compute a Jaro-Winkler similarity matrix based on an array of
+        electrode sequences. Saves out the matrix for future usage.
+
+        Args:
+            cluster (int): cluster number
+
+        Returns:
+            np.array: n_seq x n_seq similarity matrix
+        """
+
+        seqs, _ = self.fetch_sequences(cluster, all_elecs=True)
+        n_sequences = seqs.shape[0]
+
+        jaro_similarities = np.zeros((n_sequences, n_sequences))
+
+        # retrieve similarities, ignoring 'nan' values
+        for i in range(n_sequences):
+            seq_i = [elec for elec in seqs[i, :] if elec != "nan"]
+            for j in range(i, n_sequences):
+                seq_j = [elec for elec in seqs[j, :] if elec != "nan"]
+                similarity = jaro.jaro_winkler_metric(seq_i, seq_j)
+                jaro_similarities[i, j] = similarity
+
+        # symmetrize final matrix and convert to distance matrix
+        jaro_similarities = np.fmax(jaro_similarities.T, jaro_similarities)
+
+        if cluster != None:
+            fpath = self.dirs["seqs"] / (
+                f"cluster{cluster}_similarityMatrix_" f"max{self.seq_len}.csv"
+            )
+        else:
+            fpath = self.dirs["seqs"] / (f"similarityMatrix_" f"max{self.seq_len}.csv")
+
+        np.savetxt(fpath, X=jaro_similarities, fmt="%.3f", delimiter=",")
+
+        return jaro_similarities
+
+    def _compute_parc_dist_matrix(self):
+        """Compute n_parcs x n_parcs matrix of Euclidean distances, when the
+        file has not been saved previously.
+
+        Returns:
+            np.array: n_parcs x n_parcs distance array
+        """
+
+        fpath = (
+            self.dirs["dti"]
+            / "roi"
+            / (
+                f"indt_std.141.both.Schaefer2018_"
+                f"{self.parcs}Parcels_"
+                f"{self.networks}Networks_FINAL.ni"
+                "i.gz"
+            )
+        )
+
+        # run AFNI 3dCM command to find center of mass of parcels
+        afni_cmd = shlex.split(f"3dCM -all_rois {fpath}")
+        process = subprocess.run(
+            afni_cmd, stdout=subprocess.PIPE, universal_newlines=True
+        )
+
+        # skip first row (zero parcel)
+        parc_centers = np.genfromtxt(StringIO(process.stdout))[1:]
+
+        parc_dists = distance_matrix(parc_centers, parc_centers)
+
+        opath = self.dirs["sc"] / "parc_euc_dists.csv"
+        np.savetxt(opath, X=parc_dists, fmt="%.3f", delimiter=",")
+
+        return parc_dists
+
+    def fetch_sequences(self, cluster=None, all_elecs=False):
+        """Fetch electrode sequences and lag times once they have been saved
+        as .csv files in self.dirs['seqs'].
+
+        Args:
+            cluster (int, optional): cluster of interest. Defaults to None.
+            all_elecs (bool, optional): include elecs without parcels. Defaults
+                to False
+
+        Returns:
+            seqs, delays: np.array of electrode names and np.array of delay
+                times for every sequence
+        """
+
+        assert isinstance(cluster, (int, type(None)))
+
+        suffix = ""
+        if isinstance(cluster, int):
+            suffix = f"_cluster{cluster}"
+
+        noparc_str = "_withParc"
+        if all_elecs:
+            noparc_str = ""
+
+        seqs_file = self.dirs["seqs"] / (
+            f"elecSequences{noparc_str}_max" f"{self.seq_len}{suffix}.csv"
+        )
+
+        if not seqs_file.exists():
+            # remove all electrodes without parcels from sequences
+            self._remove_noparcel_elecs(cluster)
+
+        seqs = np.loadtxt(seqs_file, dtype=str, delimiter=",")
+
+        delays_file = self.dirs["seqs"] / (
+            f"delaySequences{noparc_str}_max" f"{self.seq_len}{suffix}.csv"
+        )
+        delays = np.loadtxt(delays_file, dtype=float, delimiter=",")
+
+        return seqs, delays
+
+    def fetch_normalized_parc2prop_df(
+        self, cluster, dist=45, only_gm=False, only_wm=False
+    ):
+        """Fetch df with conversion table of parcel number to proportion of
+        sequences explained.
+
+        Args:
+            cluster (int): number of cluster
+            dist (int, optional): Geodesic search distance in mm. Defaults to
+                45.
+            only_gm (bool, optional): Use gm only method. Defaults to
+                False.
+            only_wm (bool, optional): Use white matter only method. Defaults to
+                False.
+
+        Returns:
+            pd.DataFrame: dataframe with index as parcel number and column as
+                'propExplanatorySpikes'
+        """
+
+        # if not using combination method, only one input can be set to True
+        assert not (only_gm and only_wm)
+
+        method = ""
+        if only_gm:
+            method = "_geodesic"
+        elif only_wm:
+            method = "_whiteMatter"
+
+        fname = (
+            f"*{method}_normalizedCounts_within{dist}_max{self.seq_len}"
+            f"_cluster{cluster}.csv"
+        )
+        fpath_lst = glob(str(self.dirs["source_loc"] / fname))
+
+        if not (only_gm or only_wm):
+            for fpath in fpath_lst:
+                if ("whiteMatter" in fpath) or ("geodesic" in fpath):
+                    continue
+                else:
+                    parc2prop_path = fpath
+                    break
+        else:
+            parc2prop_path = fpath_lst[0]
+
+        df = pd.read_csv(parc2prop_path)
+
+        return df.set_index("parcNumber")
+
+    def fetch_geodesic_travel_times(self):
+        """Fetch geodesic travel times based on geodesic velocities and
+        distances from electrodes to nodes on the std.141 mesh.
+
+        Returns:
+            tuple: minGeo_maxSpeed_time, minGeo_minSpeed_time,
+                maxGeo_minSpeed_time, maxGeo_maxSpeed_time (four np.arrays
+                with shape (n_nodes, n_elecs))
+        """
+
+        # load and compute estimated lag times based on Geodesic distances
+
+        fdir = self.dirs["sc"]
+        temp_minGeo = pd.read_csv((fdir / "node_minGeo_byElec.csv"), header=None)
+        temp_maxGeo = pd.read_csv((fdir / "node_maxGeo_byElec.csv"), header=None)
+
+        minGeo = temp_minGeo.to_numpy(copy=True)
+        maxGeo = temp_maxGeo.to_numpy(copy=True)
+
+        # set all minimum values > dist to np.NaN and all max values to dist that
+        # have a min value less than dist
+        minGeo[minGeo > self.dist] = np.NaN
+        maxGeo[np.isnan(minGeo)] = np.NaN
+        maxGeo[maxGeo > self.dist] = self.dist
+
+        minGeo_maxSpeed_time = minGeo / MAX_GM_VEL
+        minGeo_minSpeed_time = minGeo / MIN_GM_VEL
+        maxGeo_minSpeed_time = maxGeo / MIN_GM_VEL
+        maxGeo_maxSpeed_time = maxGeo / MAX_GM_VEL
+
+        return (
+            minGeo_maxSpeed_time,
+            minGeo_minSpeed_time,
+            maxGeo_minSpeed_time,
+            maxGeo_maxSpeed_time,
+        )
+
+    def fetch_wm_travel_times(self):
+        """Fetch white matter min/max BL times.
+
+        Returns:
+            tuple: minBL_time, maxBL_time (np.arrays of shape
+                (n_parcs, n_parcs))
+        """
+
+        # load and compute estimated lag times based on WM bundle lengths
+        fdir = self.dirs["sc"]
+        BL = np.loadtxt((fdir / "BL.csv"), delimiter=",", dtype=float)
+        sBL = np.loadtxt((fdir / "sBL.csv"), delimiter=",", dtype=float)
+
+        BL[BL == 0] = np.nan
+        sBL[sBL == 0] = np.nan
+
+        maxBL = BL + sBL
+        minBL = BL - sBL
+        if minBL[minBL < 0].size > 0:
+            minBL[minBL < 0] = 0
+
+        maxBL_time = maxBL / MIN_WM_VEL
+        minBL_time = minBL / MAX_WM_VEL
+        minBL_time[np.diag_indices_from(minBL_time)] = 0
+        maxBL_time[np.diag_indices_from(maxBL_time)] = 20
+
+        return minBL_time, maxBL_time
+
     def compute_lead_elec_parc2prop_df(self, cluster):
         """Compute a lookup table of parcel to proportion explained for leading
         electrodes.
@@ -812,6 +888,10 @@ class Subject:
                 None which selects the combination source.
             all_sources (bool, optional): plot every possible source
                 (not just the single best source). Defaults to False.
+            rsxn_only (bool, optional): plot only the resection zone. Defaults
+                to False.
+            source_only (bool, optional): plot only the source. Defaults to 
+                False.
 
         Returns:
             tuple: np.array of values for creating niml.dset, str hemisphere
@@ -858,7 +938,7 @@ class Subject:
         return rsxn_arr, hemi
 
     def compute_localizing_seq_idxs(
-        self, cluster, source, only_geo=False, only_wm=False
+        self, cluster, source, only_gm=False, only_wm=False
     ):
         """Return an array of indices for which a source successfully localizes
         the sequences of a given cluster.
@@ -866,7 +946,7 @@ class Subject:
         Args:
             cluster (int): cluster number
             source (int): source parcel
-            only_geo (bool, optional): Use geodesic only localization method.
+            only_gm (bool, optional): Use gm only localization method.
                 Defaults to False.
             only_wm (bool, optional): Use white matter only localization
                 method. Defaults to False.
@@ -877,7 +957,7 @@ class Subject:
         """
 
         method = ""
-        if only_geo:
+        if only_gm:
             method = "_geodesic"
         elif only_wm:
             method = "_whiteMatter"
@@ -888,7 +968,7 @@ class Subject:
         )
         fpath_lst = glob(str(self.dirs["source_loc"] / fname))
 
-        if not (only_geo or only_wm):
+        if not (only_gm or only_wm):
             for fpath in fpath_lst:
                 if ("whiteMatter" in fpath) or ("geodesic" in fpath):
                     continue
@@ -1016,7 +1096,7 @@ class Subject:
     ):
         """Return an array of distances to the farthest electrode in each
         sequence. Hypothesis is that sequences requiring white matter will have
-        a higher proportion of distant electrodes, especially beyond 45 mm.
+        a higher proportion of distant electrodes.
 
         Args:
             cluster (int): cluster number
@@ -1075,46 +1155,8 @@ class Subject:
 
         return max_dists
 
-    def _compute_jaro_similarities(self, cluster):
-        """Compute a Jaro-Winkler similarity matrix based on an array of
-        electrode sequences. Saves out the matrix for future usage.
-
-        Args:
-            cluster (int): cluster number
-
-        Returns:
-            np.array: n_seq x n_seq similarity matrix
-        """
-
-        seqs, _ = self.fetch_sequences(cluster, all_elecs=True)
-        n_sequences = seqs.shape[0]
-
-        jaro_similarities = np.zeros((n_sequences, n_sequences))
-
-        # retrieve similarities, ignoring 'nan' values
-        for i in range(n_sequences):
-            seq_i = [elec for elec in seqs[i, :] if elec != "nan"]
-            for j in range(i, n_sequences):
-                seq_j = [elec for elec in seqs[j, :] if elec != "nan"]
-                similarity = jaro.jaro_winkler_metric(seq_i, seq_j)
-                jaro_similarities[i, j] = similarity
-
-        # symmetrize final matrix and convert to distance matrix
-        jaro_similarities = np.fmax(jaro_similarities.T, jaro_similarities)
-
-        if cluster != None:
-            fpath = self.dirs["seqs"] / (
-                f"cluster{cluster}_similarityMatrix_" f"max{self.seq_len}.csv"
-            )
-        else:
-            fpath = self.dirs["seqs"] / (f"similarityMatrix_" f"max{self.seq_len}.csv")
-
-        np.savetxt(fpath, X=jaro_similarities, fmt="%.3f", delimiter=",")
-
-        return jaro_similarities
-
     def retrieve_jaro_similarities(self, cluster):
-        """Retrieve a jaro similarity matrix for a given cluster
+        """Retrieve a Jaro similarity matrix for a given cluster
 
         Args:
             cluster (int): cluster number (None if all sequences)
@@ -1364,41 +1406,6 @@ class Subject:
 
         return surf_dict
 
-    def _compute_parc_dist_matrix(self):
-        """Compute n_parcs x n_parcs matrix of Euclidean distances, when the
-        file has not been saved previously.
-
-        Returns:
-            np.array: n_parcs x n_parcs distance array
-        """
-
-        fpath = (
-            self.dirs["dti"]
-            / "roi"
-            / (
-                f"indt_std.141.both.Schaefer2018_"
-                f"{self.parcs}Parcels_"
-                f"{self.networks}Networks_FINAL.ni"
-                "i.gz"
-            )
-        )
-
-        # run AFNI 3dCM command to find center of mass of parcels
-        afni_cmd = shlex.split(f"3dCM -all_rois {fpath}")
-        process = subprocess.run(
-            afni_cmd, stdout=subprocess.PIPE, universal_newlines=True
-        )
-
-        # skip first row (zero parcel)
-        parc_centers = np.genfromtxt(StringIO(process.stdout))[1:]
-
-        parc_dists = distance_matrix(parc_centers, parc_centers)
-
-        opath = self.dirs["sc"] / "parc_euc_dists.csv"
-        np.savetxt(opath, X=parc_dists, fmt="%.3f", delimiter=",")
-
-        return parc_dists
-
     def retrieve_parc_dist_matrix(self):
         """Retrieve n_parcs x n_parcs matrix of Euclidean distances between
         ROI center of masses.
@@ -1415,3 +1422,46 @@ class Subject:
             parc_dists = self._compute_parc_dist_matrix()
 
         return parc_dists
+
+    def compute_farthest_intrasequence_euc(self, cluster, seq_indices=None):
+        """Return an array of distances to all electrodes in each sequence.
+
+        Args:
+            cluster (int): cluster number
+            seq_indices (np.array): array of sequence indices. Defaults to all
+                sequences.
+
+        Returns:
+            np.array: array of maximum distance between a pair of electrodes 
+                for each sequence
+        """
+
+        seqs, _ = self.fetch_sequences(cluster=cluster)
+
+        if seq_indices is None:
+            pass
+        elif seq_indices.size == 0:
+            return np.array(())
+        else:
+            seqs = seqs[seq_indices]
+
+        all_dists = np.full(seqs.shape[0], np.NaN)
+
+        for i in range(seqs.shape[0]):
+            row = seqs[i, :]
+            elec_idxs = [self.elec2index_dict[elec] for elec in row if elec != "nan"]
+
+            idx_combos = combinations(elec_idxs, r=2)
+
+            max_euc_dist = 0
+
+            for idx_combo in idx_combos:
+
+                working_euc_dist = self.elec_euc_arr[idx_combo]
+
+                if working_euc_dist > max_euc_dist:
+                    max_euc_dist = working_euc_dist
+
+            all_dists[i] = max_euc_dist
+
+        return all_dists

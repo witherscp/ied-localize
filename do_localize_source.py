@@ -1,12 +1,22 @@
 from argparse import ArgumentParser
+from time import time
 from warnings import filterwarnings
-
-from utils.constants import INTRAPARCEL_DISTS
 
 filterwarnings("ignore", category=RuntimeWarning)
 
-from ied_repo.analysis import *
-from ied_repo.utils import print_progress_update, lead_geodesic, lead_wm
+import numpy as np
+
+from utils.colors import Colors
+from utils.constants import INTRAPARCEL_DISTS
+from utils.helpers import (
+    convert_geo_arrays,
+    convert_list_to_dict,
+    output_lst_of_lsts,
+    output_normalized_counts,
+    print_progress_update,
+)
+from utils.localize import lead_gm, lead_wm
+from utils.subject import Subject
 
 if __name__ == "__main__":
 
@@ -19,15 +29,13 @@ if __name__ == "__main__":
     parser = ArgumentParser(description=purpose)
     parser.add_argument("subj", help="subject code")
     parser.add_argument(
-        "--only_geo", action="store_true", help="use geodesic localization only"
+        "--only_gm", action="store_true", help="use gm localization only"
     )
     parser.add_argument(
         "--only_wm", action="store_true", help="use white matter localization only"
     )
     parser.add_argument(
-        "--fixed_geo",
-        action="store_true",
-        help="fix geodesic velocity in all directions",
+        "--fixed_gm", action="store_true", help="fix gm velocity in all directions",
     )
     parser.add_argument(
         "-p",
@@ -39,7 +47,7 @@ if __name__ == "__main__":
         "-n", "--networks", default=17, help="Yeo network {7 or 17}; defaults to 17"
     )
     parser.add_argument(
-        "--dist", default=45, help="geodesic max search distance; defaults to 45"
+        "--dist", default=45, help="gm max search distance; defaults to 45"
     )
     parser.add_argument(
         "-l", "--max_length", default=10, help="maximum allowable length of a sequence"
@@ -51,16 +59,16 @@ if __name__ == "__main__":
     n_networks = int(args.networks)
     dist = int(args.dist)
     max_length = int(args.max_length)
-    only_geo = args.only_geo
+    only_gm = args.only_gm
     only_wm = args.only_wm
-    fixed_geo = args.fixed_geo
+    fixed_gm = args.fixed_gm
 
-    # either run only geodesic, only white matter, or combination method
-    assert not (only_geo and only_wm)
+    # either run only gm, only white matter, or combination method
+    assert not (only_gm and only_wm)
 
-    if only_geo:
+    if only_gm:
         file_str = "_geodesic"
-        print_str = "geodesic"
+        print_str = "gray matter"
     elif only_wm:
         file_str = "_whiteMatter"
         print_str = "white matter"
@@ -121,7 +129,7 @@ if __name__ == "__main__":
 
                 # check both hemispheres for sources
                 for c_hemi in ("LH", "RH"):
-                    geo_sources = lead_geodesic(
+                    gm_sources = lead_gm(
                         s,
                         elec_idxs,
                         parc_idxs,
@@ -132,11 +140,11 @@ if __name__ == "__main__":
                         maxGeo,
                         minBL,
                         maxBL,
-                        only_geo=only_geo,
+                        only_gm=only_gm,
                         only_wm=only_wm,
-                        fixed_geo=fixed_geo,
+                        fixed_gm=fixed_gm,
                     )
-                    seq_sources = seq_sources + geo_sources
+                    seq_sources = seq_sources + gm_sources
 
                 wm_sources = lead_wm(
                     elec_idxs,
@@ -146,15 +154,15 @@ if __name__ == "__main__":
                     parc_maxGeo,
                     minBL,
                     maxBL,
-                    only_geo=only_geo,
+                    only_gm=only_gm,
                     only_wm=only_wm,
-                    fixed_geo=fixed_geo,
+                    fixed_gm=fixed_gm,
                 )
                 seq_sources = seq_sources + wm_sources
 
             else:
 
-                geo_sources = lead_geodesic(
+                gm_sources = lead_gm(
                     s,
                     elec_idxs,
                     parc_idxs,
@@ -165,9 +173,9 @@ if __name__ == "__main__":
                     maxGeo,
                     minBL,
                     maxBL,
-                    only_geo=only_geo,
+                    only_gm=only_gm,
                     only_wm=only_wm,
-                    fixed_geo=fixed_geo,
+                    fixed_gm=fixed_gm,
                 )
 
                 wm_sources = lead_wm(
@@ -178,12 +186,12 @@ if __name__ == "__main__":
                     parc_maxGeo,
                     minBL,
                     maxBL,
-                    only_geo=only_geo,
+                    only_gm=only_gm,
                     only_wm=only_wm,
-                    fixed_geo=fixed_geo,
+                    fixed_gm=fixed_gm,
                 )
 
-                seq_sources = geo_sources + wm_sources
+                seq_sources = gm_sources + wm_sources
 
             all_source_parcs.append(list(set(seq_sources)))
 

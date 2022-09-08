@@ -6,7 +6,59 @@ import pandas as pd
 import pygeodesic.geodesic as geodesic
 
 from .colors import Colors
-from .constants import N_NODES, NUM_MAP
+from .constants import NUM_MAP
+
+
+def _map_func(lst_str, no_index=False):
+    """Map a list of strings to a list of integers
+
+    Args:
+        lst_str (list): list of strings
+        no_index (bool, optional): if set to true, 1 will not be subtracted 
+            from each integer. Defaults to False.
+
+    Returns:
+        list: list of integers
+    """
+
+    lst_int = []
+
+    for val in lst_str:
+        if val != "":
+            if no_index:
+                lst_int.append(int(val))
+            else:
+                # convert to int and subtract one to make an index
+                lst_int.append(int(val) - 1)
+
+    return lst_int
+
+
+def convert_parcs(parc_str):
+    """Convert a string of a list of parcels to a list of integers.
+
+    Args:
+        parc_str (str): str of list of parcel numbers
+
+    Returns:
+        list: list of parcel numbers (not indices)
+    """
+
+    lst_str = parc_str.strip("][").split(", ")
+    return _map_func(lst_str, no_index=True)
+
+
+def convert_lobes(lobe_str):
+    """Convert a string of a list of lobes to a list of strings
+
+    Args:
+        lobe_str (str): str of list of lobe names
+
+    Returns:
+        list: list of string lobe names
+    """
+
+    return lobe_str.replace("'", "").replace(" ", "").strip("[]").split(",")
 
 
 def get_frequent_seqs(seqs, n_members=3, n_top=1, ordered=True):
@@ -71,58 +123,6 @@ def compute_top_lead_elec(seqs):
     return elecs[np.argmax(counts)]
 
 
-def convert_parcs(parc_str):
-    """Convert a string of a list of parcels to a list of integers.
-
-    Args:
-        parc_str (str): str of list of parcel numbers
-
-    Returns:
-        list: list of parcel numbers (not indices)
-    """
-
-    lst_str = parc_str.strip("][").split(", ")
-    return map_func(lst_str, no_index=True)
-
-
-def convert_lobes(lobe_str):
-    """Convert a string of a list of lobes to a list of strings
-
-    Args:
-        lobe_str (str): str of list of lobe names
-
-    Returns:
-        list: list of string lobe names
-    """
-
-    return lobe_str.replace("'", "").replace(" ", "").strip("[]").split(",")
-
-
-def map_func(lst_str, no_index=False):
-    """Map a list of strings to a list of integers
-
-    Args:
-        lst_str (list): list of strings
-        no_index (bool, optional): if set to true, 1 will not be subtracted 
-            from each integer. Defaults to False.
-
-    Returns:
-        list: list of integers
-    """
-
-    lst_int = []
-
-    for val in lst_str:
-        if val != "":
-            if no_index:
-                lst_int.append(int(val))
-            else:
-                # convert to int and subtract one to make an index
-                lst_int.append(int(val) - 1)
-
-    return lst_int
-
-
 def get_parcel_hemi(parcel, n_parcs):
     """For a given parcel number, return the hemisphere of that parcel
 
@@ -143,7 +143,7 @@ def get_parcel_hemi(parcel, n_parcs):
 
 
 def get_prediction_accuracy(
-    engel_class, resected_prop, resected_threshold=0.5, sz_free=["1a"]
+    engel_class, resected_prop, resected_threshold=0.5, sz_free=["1a", "1b", "1c"]
 ):
     """Based on the Engel class and proportion of a parcel resected, return
     the prediction accuracy (TP,TN,FP,FN).
@@ -154,7 +154,7 @@ def get_prediction_accuracy(
         resected_threshold (float, optional): min proportion of parcel resected
             to consider as fully resected. Defaults to 0.5.
         sz_free (list, optional): Engel classes considered as seizure free. 
-            Defaults to ['1a'].
+            Defaults to ['1a','1b','1c'].
 
     Returns:
         str: accuracy (TN, TP, FP, FN)
@@ -258,52 +258,6 @@ def roman2num(num):
     return result
 
 
-def compute_node2prop_arr(parc2prop_df, parc2node_dict, n_parcs, hemi=None):
-    """Return an array of proportions explained by individual nodes for 
-    plotting purposes.
-
-    Args:
-        parc2prop_df (pd.DataFrame): parcel to proportion dataframe
-        parc2node_dict (dict): keys = parcel number, 
-            values = list of nodes in given parcel
-        n_parcs (int): number of parcels (use s.parcs)
-        hemi (str, optional): hemisphere; if set to None, will choose the 
-            hemisphere of maximal proportion. Defaults to None.
-
-    Returns:
-        tuple: np.array of proportions at every node, hemisphere string
-    """
-
-    if hemi == None:
-        # find hemisphere of maximal parcel
-        if parc2prop_df["propExplanatorySpikes"].idxmax() < (len(parc2prop_df) // 2):
-            hemi = "LH"
-        else:
-            hemi = "RH"
-
-    assert hemi in ["LH", "RH"]
-
-    if hemi == "LH":
-        parc_range = range(1, (n_parcs // 2) + 1)
-    elif hemi == "RH":
-        parc_range = range((n_parcs // 2) + 1, n_parcs + 1)
-
-    # initialize empty proportion array
-    node2prop_arr = np.zeros(N_NODES)
-
-    # update node2parc proportion at each parcel
-    for parc in parc_range:
-
-        # get proportion for particular parcel
-        parc_slice = parc2prop_df[parc2prop_df.index == parc]
-        proportion = parc_slice["propExplanatorySpikes"].iloc[0]
-
-        # set all nodes of particular parcel to correct proportion
-        node2prop_arr[parc2node_dict[parc]] = proportion
-
-    return node2prop_arr, hemi.upper()
-
-
 def retrieve_lead_counts(elec_names, seqs, delays, lead_times=[100]):
     """Create a dataframe containing the frequency for which each electrode
     occurs first in sequence. Optionally, use lead_times array to also create 
@@ -381,6 +335,9 @@ def compute_mean_seq_length(seqs):
 def compute_mean_similarity(similarity_arr):
     """Compute mean sequence similarity.
 
+    Args:
+        similarity_arr (np.array): array of Jaro similarities (n_seqs, n_seqs)
+
     Returns:
         float: mean sequence similarity for a given cluster
     """
@@ -409,7 +366,7 @@ def compute_weighted_similarity_length(similarity_arr, seqs):
 
 def retrieve_delays(delays, seq_idxs, include_zero=False):
     """Return array of delay times for sequence indices of interest. Hypothesis
-    is that white matter sequences will have faster lag times than geodesic
+    is that white matter sequences will have faster lag times than gray matter
     only.
 
     Args:
@@ -618,7 +575,7 @@ def extend_lst_of_lsts(lst_of_lsts):
     """Uniformize the length of each list in a list_of_lists by repeatedly 
     appending the last term to each list, until lengths match. Ex: 
     [[0,1], [2,4,5], [1]] --> [[0,1,1], [2,4,5], [1,1,1]]. This function is
-    used in lead_geodesic() within localize.py.
+    used in lead_gm() within localize.py.
 
     Args:
         lst_of_lsts (list): list of lists

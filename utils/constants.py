@@ -22,8 +22,8 @@ data_directories = {
 # propagation parameters
 MAX_WM_VEL = 5.3
 MIN_WM_VEL = 1.7
-MAX_GEO_VEL = 0.45
-MIN_GEO_VEL = 0.25
+MAX_GM_VEL = 0.45
+MIN_GM_VEL = 0.25
 
 # intraparcel distance dictionary
 INTRAPARCEL_DISTS = {200: 46, 400: 36, 600: 27}

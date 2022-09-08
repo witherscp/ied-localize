@@ -5,11 +5,11 @@ filterwarnings("ignore", category=RuntimeWarning)
 
 import numpy as np
 
-from .constants import *
+from .constants import MIN_GM_VEL, MAX_GM_VEL, MIN_WM_VEL, MAX_WM_VEL, N_NODES
 from .helpers import extend_lst_of_lsts
 
 
-def lead_geodesic(
+def lead_gm(
     Subj,
     elec_idxs,
     parc_idxs,
@@ -20,36 +20,36 @@ def lead_geodesic(
     maxGeo,
     minBL,
     maxBL,
-    only_geo=False,
+    only_gm=False,
     only_wm=False,
     n_steps=10,
-    fixed_geo=False,
+    fixed_gm=False,
 ):
     """Localize the sources of a sequence based on the assumption that the lead
-    electrode receives signal via geodesic spread. Returns a list of unique 
+    electrode receives signal via gm spread. Returns a list of unique 
     parcel numbers.
 
     Args:
         Subj (Subject): instance of Subject class
         elec_idxs (np.array): array of electrode indices (for indexing min/max 
-            geodesic arrays)
+            gm arrays)
         parc_idxs (list): list of parcel index lists associated with elecs
         lags (np.array): array of follower electrode lag times
         hemis (np.array): array of electrode hemispheres
-        cluster_hemi (str): hemisphere associated with cluster (a geodesic 
+        cluster_hemi (str): hemisphere associated with cluster (a gm 
             source can only come from this cluster)
-        minGeo (np.array): minimum geodesic distances (n_nodes, n_elecs)
-        maxGeo (np.array): maximum geodesic distances (n_nodes, n_elecs)
+        minGeo (np.array): minimum gm distances (n_nodes, n_elecs)
+        maxGeo (np.array): maximum gm distances (n_nodes, n_elecs)
         minBL (np.array): minimum bundle lengths (n_parcs, n_parcs)
         maxBL (np.array): maximum bundle lengths (n_parcs, n_parcs)
-        only_geo (bool, optional): require followers to use geodesic 
+        only_gm (bool, optional): require followers to use gm 
             propagation. Defaults to False.
         only_wm (bool, optional): require all white matter propagation 
             (immediately returns []). Defaults to False.
         n_steps (int, optional): number of steps used in linspace; a larger 
             number will increase max/min range but slow down algorithm. 
             Defaults to 10.
-        fixed_geo (bool, optional): require the same geodesic conduction 
+        fixed_gm (bool, optional): require the same gm conduction 
             velocity in all directions. Defaults to False.
 
     Returns:
@@ -57,7 +57,7 @@ def lead_geodesic(
             lag times)
     """
 
-    # only_wm means do not attempt localization with lead geodesic
+    # only_wm means do not attempt localization with lead gm
     if only_wm:
         return []
 
@@ -71,9 +71,9 @@ def lead_geodesic(
         else:
             hemi_parc_idxs = np.arange(Subj.parcs // 2, Subj.parcs)
 
-    # if only geodesic allowed, check that all electrodes are in same
+    # if only gm allowed, check that all electrodes are in same
     # hemisphere as cluster
-    if only_geo:
+    if only_gm:
         if np.any(hemis != cluster_hemi):
             return []
 
@@ -83,48 +83,48 @@ def lead_geodesic(
     f_parc_idxs = parc_idxs[1:]
     n_followers = len(f_elec_idxs)
 
-    # create array of lead geodesic distance linspace (n_steps, n_nodes, 1)
-    l_geo_range = np.linspace(
+    # create array of lead gm distance linspace (n_steps, n_nodes, 1)
+    l_gm_range = np.linspace(
         minGeo[:, l_elec_idx][:, np.newaxis],
         maxGeo[:, l_elec_idx][:, np.newaxis],
         n_steps,
     )
 
-    # compute min/max velocity geo using equation from methods section
+    # compute min/max velocity gm using equation from methods section
     # shape (n_steps, n_nodes, n_followers)
-    if fixed_geo:
-        min_v_geo = (minGeo[:, f_elec_idxs] - l_geo_range) / lags
-        max_v_geo = (maxGeo[:, f_elec_idxs] - l_geo_range) / lags
+    if fixed_gm:
+        min_v_gm = (minGeo[:, f_elec_idxs] - l_gm_range) / lags
+        max_v_gm = (maxGeo[:, f_elec_idxs] - l_gm_range) / lags
     else:
         min_denom, max_denom = find_denom_range(
             minGeo[:, f_elec_idxs],
             maxGeo[:, f_elec_idxs],
-            MIN_GEO_VEL,
-            MAX_GEO_VEL,
+            MIN_GM_VEL,
+            MAX_GM_VEL,
             lags,
-            fixed_velocity=fixed_geo,
+            fixed_velocity=fixed_gm,
             n_steps=n_steps,
         )
-        min_v_geo = l_geo_range / max_denom
-        max_v_geo = l_geo_range / min_denom
+        min_v_gm = l_gm_range / max_denom
+        max_v_gm = l_gm_range / min_denom
 
-    min_v_geo, max_v_geo = constrain_velocities(min_v_geo, max_v_geo, is_geo=True)
+    min_v_gm, max_v_gm = constrain_velocities(min_v_gm, max_v_gm, is_gm=True)
 
-    # check possibilities where followers are only geodesic
-    if only_geo:
+    # check possibilities where followers are only gm
+    if only_gm:
 
         # check for existence of overlapping range
-        largest_min_v = np.max(min_v_geo, axis=-1)
-        smallest_max_v = np.min(max_v_geo, axis=-1)
+        largest_min_v = np.max(min_v_gm, axis=-1)
+        smallest_max_v = np.min(max_v_gm, axis=-1)
         source_indices = np.unique(np.where(smallest_max_v > largest_min_v)[1])
 
-    # check possibilities where followers are geodesic or WM
+    # check possibilities where followers are gm or WM
     else:
 
         # for elecs in different hemisphere, convert all values to np.NaN
         other_hemi_mask = f_hemis != cluster_hemi
-        min_v_geo[:, :, other_hemi_mask] = np.NaN
-        max_v_geo[:, :, other_hemi_mask] = np.NaN
+        min_v_gm[:, :, other_hemi_mask] = np.NaN
+        max_v_gm[:, :, other_hemi_mask] = np.NaN
 
         # match lengths of all parc_idx lists, for simultaneous indexing
         f_parc_idxs = extend_lst_of_lsts(f_parc_idxs)
@@ -155,20 +155,20 @@ def lead_geodesic(
             combo_min_denom[nodes, :] = parc_min_denom[parc_idx, :]
             combo_max_denom[nodes, :] = parc_max_denom[parc_idx, :]
 
-        # compute min/max velocity geo (combo method) using equations from
+        # compute min/max velocity gm (combo method) using equations from
         # methods section
-        combo_min_v_geo = l_geo_range / combo_max_denom
-        combo_max_v_geo = l_geo_range / combo_min_denom
+        combo_min_v_gm = l_gm_range / combo_max_denom
+        combo_max_v_gm = l_gm_range / combo_min_denom
 
-        (combo_min_v_geo, combo_max_v_geo) = constrain_velocities(
-            combo_min_v_geo, combo_max_v_geo, is_geo=True
+        (combo_min_v_gm, combo_max_v_gm) = constrain_velocities(
+            combo_min_v_gm, combo_max_v_gm, is_gm=True
         )
 
         # create matrix of shape (n_steps,N_NODES,n_elecs,v/combo_v,min/max)
         master_v = np.stack(
             (
-                np.stack((min_v_geo, combo_min_v_geo), axis=-1),
-                np.stack((max_v_geo, combo_max_v_geo), axis=-1),
+                np.stack((min_v_gm, combo_min_v_gm), axis=-1),
+                np.stack((max_v_gm, combo_max_v_gm), axis=-1),
             ),
             axis=-1,
         )
@@ -207,32 +207,32 @@ def lead_wm(
     parc_maxGeo,
     minBL,
     maxBL,
-    only_geo=False,
+    only_gm=False,
     only_wm=False,
     n_steps=10,
-    fixed_geo=False,
+    fixed_gm=False,
 ):
     """Localize the sources of a sequence based on the assumption that the lead
-    electrode receives signal via geodesic spread. Returns a list of unique 
+    electrode receives signal via gm spread. Returns a list of unique 
     parcel numbers.
 
     Args:
         elec_idxs (np.array): array of electrode indices (for indexing min/max 
-            parc geodesic arrays)
+            parc gm arrays)
         parc_idxs (list): list of parcel index lists associated with elecs
         lags (np.array): array of follower electrode lag times
-        parc_minGeo (np.array): minimum geodesic distances (n_parcs, n_elecs)
-        parc_maxGeo (np.array): maximum geodesic distances (n_parcs, n_elecs)
+        parc_minGeo (np.array): minimum gm distances (n_parcs, n_elecs)
+        parc_maxGeo (np.array): maximum gm distances (n_parcs, n_elecs)
         minBL (np.array): minimum bundle lengths (n_parcs, n_parcs)
         maxBL (np.array): maximum bundle lengths (n_parcs, n_parcs)
-        only_geo (bool, optional): require all geodesic propagation 
+        only_gm (bool, optional): require all gm propagation 
             (immediately returns []). Defaults to False.
         only_wm (bool, optional): require followers to use white matter 
             propagation. Defaults to False.
         n_steps (int, optional): number of steps used in linspace; a larger 
             number will increase max/min range but slow down algorithm. 
             Defaults to 10.
-        fixed_geo (bool, optional): require the same geodesic conduction 
+        fixed_gm (bool, optional): require the same gm conduction 
             velocity in all directions. Defaults to False.
 
     Returns:
@@ -240,8 +240,8 @@ def lead_wm(
             explain lag times)
     """
 
-    # only_geo means do not attempt localization with wm
-    if only_geo:
+    # only_gm means do not attempt localization with wm
+    if only_gm:
         return []
 
     f_elec_idxs = elec_idxs[1:]
@@ -249,7 +249,7 @@ def lead_wm(
     f_parc_idxs = parc_idxs[1:]
     n_followers = len(f_elec_idxs)
 
-    # create array of lead geodesic distance linspace (n_steps, n_nodes, 1)
+    # create array of lead gm distance linspace (n_steps, n_nodes, 1)
     l_BL_range = np.linspace(
         minBL[:, l_parc_idxs][:, np.newaxis],
         maxBL[:, l_parc_idxs][:, np.newaxis],
@@ -264,10 +264,10 @@ def lead_wm(
         min_denom, max_denom = find_denom_range(
             parc_minGeo[:, f_elec_idxs],
             parc_maxGeo[:, f_elec_idxs],
-            MIN_GEO_VEL,
-            MAX_GEO_VEL,
+            MIN_GM_VEL,
+            MAX_GM_VEL,
             lags,
-            fixed_velocity=fixed_geo,
+            fixed_velocity=fixed_gm,
             n_steps=n_steps,
         )
 
@@ -275,9 +275,9 @@ def lead_wm(
     for i in range(len(l_parc_idxs)):
 
         if not only_wm:
-            # find all possible combo_v_wm given a range of constant v_geo
+            # find all possible combo_v_wm given a range of constant v_gm
             # these have shape (n_steps [optional], n_steps, n_parcs, n_followers)
-            if fixed_geo:
+            if fixed_gm:
                 combo_min_v_wm = l_BL_range[:, :, :, i] / max_denom[:, np.newaxis, :, :]
                 combo_max_v_wm = l_BL_range[:, :, :, i] / min_denom[:, np.newaxis, :, :]
             else:
@@ -321,10 +321,10 @@ def lead_wm(
                 set(np.where(smallest_max_v > largest_min_v)[1])
             )
 
-        # check possibilities where followers are WM or geodesic
+        # check possibilities where followers are WM or gm
         else:
 
-            if fixed_geo:
+            if fixed_gm:
                 # broadcast min/max_v_wm arrays to stack with combo arrays
                 # these will have shape (n_steps, n_steps, n_parcs, n_followers)
                 n_steps = combo_min_v_wm.shape[0]
@@ -345,7 +345,7 @@ def lead_wm(
             # (n_steps [optional], n_steps, parcs, 2**n_followers, n_followers, min/max)
             # each index in the second dimension is a different combination
             # of v/combo_v
-            if fixed_geo:
+            if fixed_gm:
                 shuffled = master_v[
                     :,
                     :,
@@ -396,12 +396,12 @@ def find_denom_range(
     Args:
         min_dist (np.array): minimum distance from source to followers
         max_dist (np.array): maximum distance from source to followers
-        min_vel (float): minimum velocity (geodesic or wm)
-        max_vel (float): maximum velocity (geodesic or wm)
+        min_vel (float): minimum velocity (gm or wm)
+        max_vel (float): maximum velocity (gm or wm)
         lags (np.array): array of lag times to followers
         fixed_velocity (bool, optional): followers must receive signal at the 
-            same velocity (used for lead wm/ follower geodesic, with 
-            fixed_geo). Defaults to False.
+            same velocity (used for lead wm/ follower gm, with 
+            fixed_gm). Defaults to False.
         n_steps (int, optional): number of steps used in linspace; a larger 
             number will increase max/min range but slow down algorithm. 
             Defaults to 50.
@@ -436,14 +436,14 @@ def find_denom_range(
     return min_denom, max_denom
 
 
-def constrain_velocities(min_arr, max_arr, is_geo=False, is_wm=False):
+def constrain_velocities(min_arr, max_arr, is_gm=False, is_wm=False):
     """Given min and maximum velocity intervals, constrain them based on 
     physiological conduction velocities.
 
     Args:
         min_arr (np.array): array of minimum velocities
         max_arr (np.array): array of maximum velocities
-        is_geo (bool, optional): Use geodesic constraints. Defaults to False.
+        is_gm (bool, optional): Use gm constraints. Defaults to False.
         is_wm (bool, optional): Use white matter constraints. Defaults to 
             False.
 
@@ -451,11 +451,11 @@ def constrain_velocities(min_arr, max_arr, is_geo=False, is_wm=False):
         tuple: min_arr, max_arr (after undergoing constraints)
     """
 
-    assert is_geo or is_wm
+    assert is_gm or is_wm
 
-    if is_geo:
-        min_arr = np.maximum(min_arr, MIN_GEO_VEL)
-        max_arr = np.minimum(max_arr, MAX_GEO_VEL)
+    if is_gm:
+        min_arr = np.maximum(min_arr, MIN_GM_VEL)
+        max_arr = np.minimum(max_arr, MAX_GM_VEL)
     else:
         min_arr = np.maximum(min_arr, MIN_WM_VEL)
         max_arr = np.minimum(max_arr, MAX_WM_VEL)

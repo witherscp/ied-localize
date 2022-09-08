@@ -13,18 +13,65 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator
 import seaborn as sns
 
-from ied_repo.utils.helpers import *
-from ied_repo.utils.subject import Subject
+from utils.constants import N_NODES
+from utils.helpers import reorient_coord, get_parcel_hemi
+from utils.subject import Subject
 
 rc("font", family="TimesNewRoman")
 
 
-def plot_prop_explained_histogram(parc2prop, hemi, n_parcs=600):
-    """Return a Figure object displaying the proportion of sequences explained 
-    by each parcel, in histogram format. 
+def compute_node2prop_arr(parc2prop_df, parc2node_dict, n_parcs, hemi=None):
+    """Return an array of proportions explained by individual nodes for 
+    plotting purposes.
 
     Args:
-        parc2prop (pd.DataFrame): proportion of sequences explained for each 
+        parc2prop_df (pd.DataFrame): parcel to proportion dataframe
+        parc2node_dict (dict): keys = parcel number, 
+            values = list of nodes in given parcel
+        n_parcs (int): number of parcels (use s.parcs)
+        hemi (str, optional): hemisphere; if set to None, will choose the 
+            hemisphere of maximal proportion. Defaults to None.
+
+    Returns:
+        tuple: np.array of proportions at every node, hemisphere string
+    """
+
+    if hemi == None:
+        # find hemisphere of maximal parcel
+        if parc2prop_df["propExplanatorySpikes"].idxmax() < (len(parc2prop_df) // 2):
+            hemi = "LH"
+        else:
+            hemi = "RH"
+
+    assert hemi in ["LH", "RH"]
+
+    if hemi == "LH":
+        parc_range = range(1, (n_parcs // 2) + 1)
+    elif hemi == "RH":
+        parc_range = range((n_parcs // 2) + 1, n_parcs + 1)
+
+    # initialize empty proportion array
+    node2prop_arr = np.zeros(N_NODES)
+
+    # update node2parc proportion at each parcel
+    for parc in parc_range:
+
+        # get proportion for particular parcel
+        parc_slice = parc2prop_df[parc2prop_df.index == parc]
+        proportion = parc_slice["propExplanatorySpikes"].iloc[0]
+
+        # set all nodes of particular parcel to correct proportion
+        node2prop_arr[parc2node_dict[parc]] = proportion
+
+    return node2prop_arr, hemi.upper()
+
+
+def plot_prop_explained_histogram(parc2prop, hemi, n_parcs=600):
+    """Return a Figure object displaying the proportion of sequences explained
+    by each parcel, in histogram format.
+
+    Args:
+        parc2prop (pd.DataFrame): proportion of sequences explained for each
             parcel
         hemi (str): hemisphere; "LH" or "RH"
         n_parcs (int, optional): number of parcels. Defaults to 600.
@@ -89,13 +136,13 @@ def plot_source_localization(
         Subj (utils.subject.Subject): instance of Subject class
         surfs (list, optional): surfaces of interest. Defaults to ['pial','inf_200'].
         cmap (str, optional): colormap used to display results. Defaults to 'Spectral_r'.
-        dist (int, optional): Geodesic search distance in mm. Defaults to 
+        dist (int, optional): Geodesic search distance in mm. Defaults to
             45.
-        only_geo (bool, optional): Use geodesic only method. Defaults to 
+        only_geo (bool, optional): Use geodesic only method. Defaults to
             False.
-        only_wm (bool, optional): Use white matter only method. Defaults to 
+        only_wm (bool, optional): Use white matter only method. Defaults to
             False.
-        lead_elec (bool, optional): Plot lead electrode parcels instead of 
+        lead_elec (bool, optional): Plot lead electrode parcels instead of
             localization results. Defaults to False.
 
     Returns:
@@ -163,7 +210,7 @@ def plot_source_localization(
 def barplot_annotate_brackets(
     num1, num2, data, center, height, yerr=None, dh=0.05, barh=0.05, fs=16, maxasterix=3
 ):
-    """ 
+    """
     Annotate barplot with p-values.
 
     Args:
@@ -176,7 +223,7 @@ def barplot_annotate_brackets(
         dh: height offset over bar / bar + yerr in axes coordinates (0 to 1)
         barh: bar height in axes coordinates (0 to 1)
         fs: font size
-        maxasterix: maximum number of asterixes to write (for very small 
+        maxasterix: maximum number of asterixes to write (for very small
             p-values)
     """
 
@@ -197,7 +244,7 @@ def barplot_annotate_brackets(
             elif p == 0.01:
                 p = 0.001
 
-            if maxasterix and len(text) == maxasterix:
+            if maxasterix and (len(text) == maxasterix):
                 break
 
         if len(text) == 0:
@@ -237,14 +284,14 @@ def get_electrode_node_arr(
     Args:
         Subj (Subject instance): an instance of Subject
         elecs (list, optional): electrodes to plot. Defaults to [].
-        lags (list, optional): lag times to influence size and color of 
+        lags (list, optional): lag times to influence size and color of
             electrodes. Defaults to [].
-        func (func, optional): function to convert lag time to radius. 
+        func (func, optional): function to convert lag time to radius.
             Defaults to (lambda x: ((100 - x)/100 * 2)).
 
     Returns:
-        np.array: array with shape (n_elecs, 5); first 3 columns are x,y,z 
-            coordinates; last 2 columns are color intensity and radius, 
+        np.array: array with shape (n_elecs, 5); first 3 columns are x,y,z
+            coordinates; last 2 columns are color intensity and radius,
             respectively
     """
 
@@ -288,7 +335,7 @@ def get_electrode_node_arr(
 
 
 def array_to_niml(array, odir, fname):
-    """Create a niml.dset file at {odir / fname} using array of shape 
+    """Create a niml.dset file at {odir / fname} using array of shape
     (n_nodes,1)
 
     Args:
@@ -335,7 +382,7 @@ def create_topo_arr(Subj, hemi):
         hemi (str): hemisphere of interest
 
     Returns:
-        np.array: array of shape (n_nodes, 3) where each row represents one 
+        np.array: array of shape (n_nodes, 3) where each row represents one
             triangle and each column represents a node at one vertex.
     """
 
@@ -358,7 +405,7 @@ def create_topo_arr(Subj, hemi):
 
 
 def get_border_nodes(Subj, parcel):
-    """Create (n_nodes,1) array with value 1 for every node on the border of 
+    """Create (n_nodes,1) array with value 1 for every node on the border of
     given parcel.
 
     Args:
@@ -366,7 +413,7 @@ def get_border_nodes(Subj, parcel):
         parcel (int): parcel number in range (1,n_parcs+1)
 
     Returns:
-        np.array: array with 1's for every node on border of parcel, 
+        np.array: array with 1's for every node on border of parcel,
             shape (n_nodes,1). Use array_to_niml() to convert to niml.dset
     """
 
