@@ -1,6 +1,7 @@
-from matplotlib.colors import LinearSegmentedColormap
 from pathlib import Path
 from sys import platform
+
+from matplotlib.colors import LinearSegmentedColormap
 
 # set MAIN_DIR based on local system directory structure
 assert platform in ["darwin", "linux"]

@@ -21,7 +21,6 @@ from utils.subject import Subject
 if __name__ == "__main__":
 
     # parse arguments
-
     purpose = (
         "to localize the putative source of interictal spike sequences"
         "using GM, WM, and spike timings"

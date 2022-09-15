@@ -13,9 +13,9 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator
 import seaborn as sns
 
-from utils.constants import N_NODES
-from utils.helpers import reorient_coord, get_parcel_hemi
-from utils.subject import Subject
+from ied_localize.utils.constants import N_NODES
+from ied_localize.utils.helpers import reorient_coord, get_parcel_hemi
+from ied_localize.utils.subject import Subject
 
 rc("font", family="TimesNewRoman")
 
