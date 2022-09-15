@@ -6,17 +6,17 @@ filterwarnings("ignore", category=RuntimeWarning)
 
 import numpy as np
 
-from utils.colors import Colors
-from utils.constants import INTRAPARCEL_DISTS
-from utils.helpers import (
+from ied_localize.utils.colors import Colors
+from ied_localize.utils.constants import INTRAPARCEL_DISTS
+from ied_localize.utils.helpers import (
     convert_geo_arrays,
     convert_list_to_dict,
     output_lst_of_lsts,
     output_normalized_counts,
     print_progress_update,
 )
-from utils.localize import lead_gm, lead_wm
-from utils.subject import Subject
+from ied_localize.utils.localize import lead_gm, lead_wm
+from ied_localize.utils.subject import Subject
 
 if __name__ == "__main__":
 
@@ -34,7 +34,9 @@ if __name__ == "__main__":
         "--only_wm", action="store_true", help="use white matter localization only"
     )
     parser.add_argument(
-        "--fixed_gm", action="store_true", help="fix gm velocity in all directions",
+        "--fixed_gm",
+        action="store_true",
+        help="fix gm velocity in all directions",
     )
     parser.add_argument(
         "-p",

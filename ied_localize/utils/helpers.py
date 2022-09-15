@@ -14,7 +14,7 @@ def _map_func(lst_str, no_index=False):
 
     Args:
         lst_str (list): list of strings
-        no_index (bool, optional): if set to true, 1 will not be subtracted 
+        no_index (bool, optional): if set to true, 1 will not be subtracted
             from each integer. Defaults to False.
 
     Returns:
@@ -62,16 +62,16 @@ def convert_lobes(lobe_str):
 
 
 def get_frequent_seqs(seqs, n_members=3, n_top=1, ordered=True):
-    """Retrieves the {n_top} number of most frequent {n_member} sequences 
+    """Retrieves the {n_top} number of most frequent {n_member} sequences
     in a cluster.
 
     Args:
         seqs (np.array): Electrode sequences
         n_members (int, optional): Number of members in a sequence. Defaults
             to 3
-        n_top (int, optional): Number of highest ranking sequences. 
+        n_top (int, optional): Number of highest ranking sequences.
             Defaults to 1.
-        ordered (bool, optional): Order of electrodes matters. Defaults 
+        ordered (bool, optional): Order of electrodes matters. Defaults
             to True.
 
     Returns:
@@ -109,7 +109,7 @@ def get_frequent_seqs(seqs, n_members=3, n_top=1, ordered=True):
 
 
 def compute_top_lead_elec(seqs):
-    """Given an array of electrode sequences, return the most frequent lead 
+    """Given an array of electrode sequences, return the most frequent lead
     electrode.
 
     Args:
@@ -153,7 +153,7 @@ def get_prediction_accuracy(
         resected_prop (float): proportion of parcel resected
         resected_threshold (float, optional): min proportion of parcel resected
             to consider as fully resected. Defaults to 0.5.
-        sz_free (list, optional): Engel classes considered as seizure free. 
+        sz_free (list, optional): Engel classes considered as seizure free.
             Defaults to ['1a','1b','1c'].
 
     Returns:
@@ -186,7 +186,7 @@ def compute_elec2parc_euc(elec2parc_euc_arr, elec_idx, parc):
     """Return the Euclidean distance between an electrode index and parcel.
 
     Args:
-        elec2parc_euc_arr (np.array): array of elec2parc Euclidean distances 
+        elec2parc_euc_arr (np.array): array of elec2parc Euclidean distances
             (use: self.parc_minEuclidean_byElec)
         elec_idx (int): electrode index (use: self.get_elec_idx(elec))
         parc (int): parcel number
@@ -203,7 +203,7 @@ def compute_elec2parc_geo(parc2node_dict, elec2node_geo_arr, elec_idx, parc):
 
     Args:
         parc2node_dict (dict): keys: parcel number; values: node list
-        elec2node_geo_arr (np.array): array of electrode to node geodesic 
+        elec2node_geo_arr (np.array): array of electrode to node geodesic
             distances
         elec_idx (int): electrode index (use: self.get_elec_idx(elec))
         parc (int): parcel number
@@ -260,18 +260,18 @@ def roman2num(num):
 
 def retrieve_lead_counts(elec_names, seqs, delays, lead_times=[100]):
     """Create a dataframe containing the frequency for which each electrode
-    occurs first in sequence. Optionally, use lead_times array to also create 
-    columns for the number of times each electrode occurs within the 
-    first xx ms. 
+    occurs first in sequence. Optionally, use lead_times array to also create
+    columns for the number of times each electrode occurs within the
+    first xx ms.
 
     Args:
         elec_names (list): list of electrode names
         seqs (np.array): n_seqs x n_elecs array with names of electrodes firing
             within each sequence. 'nan' is used to fill blank positions
-        delays (np.array): n_seqs x n_elecs array with lag times; np.NaN is 
+        delays (np.array): n_seqs x n_elecs array with lag times; np.NaN is
             used to fill blank positions
-        lead_times (list, optional): list of lag times of interest; ex: [20] 
-            will create a column in which elecs within the first 20 ms are 
+        lead_times (list, optional): list of lag times of interest; ex: [20]
+            will create a column in which elecs within the first 20 ms are
             counted. Defaults to [100].
     """
 
@@ -347,7 +347,7 @@ def compute_mean_similarity(similarity_arr):
 
 def compute_weighted_similarity_length(similarity_arr, seqs):
     """Compute metric combining similarity of sequences and mean length. My
-    hypothesis is that a combination of greater length and greater similarity 
+    hypothesis is that a combination of greater length and greater similarity
     makes it more likely that sequences are closer to the epileptogenic zone.
 
     Args:
@@ -370,10 +370,10 @@ def retrieve_delays(delays, seq_idxs, include_zero=False):
     only.
 
     Args:
-        delays (np.array): array of lag times 
+        delays (np.array): array of lag times
             (use: _, delays = s.fetch_sequences(cluster))
         seq_idxs (np.array): array of sequence indices
-        include_zero (bool): include all of the 0ms lag times. Defaults to 
+        include_zero (bool): include all of the 0ms lag times. Defaults to
             False.
 
     Returns:
@@ -398,7 +398,7 @@ def output_lst_of_lsts(lst_of_lsts, my_dtype=float):
 
     Args:
         lst_of_lsts (list): list of lists
-        my_dtype (_type_, optional): type of output array (typically float or 
+        my_dtype (_type_, optional): type of output array (typically float or
             object). Defaults to float.
 
     Returns:
@@ -422,15 +422,15 @@ def reorient_coord(coord_arr, in_orient, out_orient):
     Change the orientation of a set of XYZ coordinates.
 
     Args:
-        coord_arr (np.array): XYZ coordinate array of shape (n_coords,3) with 
+        coord_arr (np.array): XYZ coordinate array of shape (n_coords,3) with
             columns corresponding to X, Y and Z axes
-        in_orient (str): 3-letter code indicating orientation of input 
+        in_orient (str): 3-letter code indicating orientation of input
             coordinates
-        out_orient (str): 3-letter code indicating desired orientation of 
+        out_orient (str): 3-letter code indicating desired orientation of
             output coordinates
 
     Returns:
-        np.array: XYZ coordinate array (same shape as coord_arr) with new 
+        np.array: XYZ coordinate array (same shape as coord_arr) with new
         orientation specified in "out_orient"
     """
     # define axis codes
@@ -452,7 +452,7 @@ def reorient_coord(coord_arr, in_orient, out_orient):
 
 
 def convert_list_to_dict(lst):
-    """Convert a list of source parcel lists to a dictionary with the 
+    """Convert a list of source parcel lists to a dictionary with the
     proportion of sequences explained by each parcel.
 
     Args:
@@ -460,7 +460,7 @@ def convert_list_to_dict(lst):
 
     Returns:
         dict: dictionary with proportion of sequences explained by each source
-            parcel 
+            parcel
     """
 
     out_dict = {}
@@ -482,7 +482,7 @@ def output_normalized_counts(num_counts, hemi_dict, n_parcs):
         n_parcs (int): number of parcs total
 
     Returns:
-        pd.DataFrame: dataframe index = parcNumber, 
+        pd.DataFrame: dataframe index = parcNumber,
             column = propExplanatorySpikes
     """
 
@@ -572,8 +572,8 @@ def print_progress_update(i, start_time, n_seqs):
 
 
 def extend_lst_of_lsts(lst_of_lsts):
-    """Uniformize the length of each list in a list_of_lists by repeatedly 
-    appending the last term to each list, until lengths match. Ex: 
+    """Uniformize the length of each list in a list_of_lists by repeatedly
+    appending the last term to each list, until lengths match. Ex:
     [[0,1], [2,4,5], [1]] --> [[0,1,1], [2,4,5], [1,1,1]]. This function is
     used in lead_gm() within localize.py.
 
@@ -603,7 +603,7 @@ def get_geodesic_dist(source_nodes, target_nodes, pial):
     Args:
         source_nodes (np.array): array of one or more source nodes
         target_nodes (np.array): array of one or more target nodes
-        pial (nilearn.surface.surface.mesh): surface for given hemisphere, 
+        pial (nilearn.surface.surface.mesh): surface for given hemisphere,
             created using s.fetch_pial_surface_dict()[hemi]
 
     Returns:

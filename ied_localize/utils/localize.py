@@ -26,34 +26,34 @@ def lead_gm(
     fixed_gm=False,
 ):
     """Localize the sources of a sequence based on the assumption that the lead
-    electrode receives signal via gm spread. Returns a list of unique 
+    electrode receives signal via gm spread. Returns a list of unique
     parcel numbers.
 
     Args:
         Subj (Subject): instance of Subject class
-        elec_idxs (np.array): array of electrode indices (for indexing min/max 
+        elec_idxs (np.array): array of electrode indices (for indexing min/max
             gm arrays)
         parc_idxs (list): list of parcel index lists associated with elecs
         lags (np.array): array of follower electrode lag times
         hemis (np.array): array of electrode hemispheres
-        cluster_hemi (str): hemisphere associated with cluster (a gm 
+        cluster_hemi (str): hemisphere associated with cluster (a gm
             source can only come from this cluster)
         minGeo (np.array): minimum gm distances (n_nodes, n_elecs)
         maxGeo (np.array): maximum gm distances (n_nodes, n_elecs)
         minBL (np.array): minimum bundle lengths (n_parcs, n_parcs)
         maxBL (np.array): maximum bundle lengths (n_parcs, n_parcs)
-        only_gm (bool, optional): require followers to use gm 
+        only_gm (bool, optional): require followers to use gm
             propagation. Defaults to False.
-        only_wm (bool, optional): require all white matter propagation 
+        only_wm (bool, optional): require all white matter propagation
             (immediately returns []). Defaults to False.
-        n_steps (int, optional): number of steps used in linspace; a larger 
-            number will increase max/min range but slow down algorithm. 
+        n_steps (int, optional): number of steps used in linspace; a larger
+            number will increase max/min range but slow down algorithm.
             Defaults to 10.
-        fixed_gm (bool, optional): require the same gm conduction 
+        fixed_gm (bool, optional): require the same gm conduction
             velocity in all directions. Defaults to False.
 
     Returns:
-        list: list of unique source parcel numbers (if [], no parcels explain 
+        list: list of unique source parcel numbers (if [], no parcels explain
             lag times)
     """
 
@@ -213,11 +213,11 @@ def lead_wm(
     fixed_gm=False,
 ):
     """Localize the sources of a sequence based on the assumption that the lead
-    electrode receives signal via gm spread. Returns a list of unique 
+    electrode receives signal via gm spread. Returns a list of unique
     parcel numbers.
 
     Args:
-        elec_idxs (np.array): array of electrode indices (for indexing min/max 
+        elec_idxs (np.array): array of electrode indices (for indexing min/max
             parc gm arrays)
         parc_idxs (list): list of parcel index lists associated with elecs
         lags (np.array): array of follower electrode lag times
@@ -225,18 +225,18 @@ def lead_wm(
         parc_maxGeo (np.array): maximum gm distances (n_parcs, n_elecs)
         minBL (np.array): minimum bundle lengths (n_parcs, n_parcs)
         maxBL (np.array): maximum bundle lengths (n_parcs, n_parcs)
-        only_gm (bool, optional): require all gm propagation 
+        only_gm (bool, optional): require all gm propagation
             (immediately returns []). Defaults to False.
-        only_wm (bool, optional): require followers to use white matter 
+        only_wm (bool, optional): require followers to use white matter
             propagation. Defaults to False.
-        n_steps (int, optional): number of steps used in linspace; a larger 
-            number will increase max/min range but slow down algorithm. 
+        n_steps (int, optional): number of steps used in linspace; a larger
+            number will increase max/min range but slow down algorithm.
             Defaults to 10.
-        fixed_gm (bool, optional): require the same gm conduction 
+        fixed_gm (bool, optional): require the same gm conduction
             velocity in all directions. Defaults to False.
 
     Returns:
-        list: list of unique source parcel numbers (if [], then no parcels 
+        list: list of unique source parcel numbers (if [], then no parcels
             explain lag times)
     """
 
@@ -399,11 +399,11 @@ def find_denom_range(
         min_vel (float): minimum velocity (gm or wm)
         max_vel (float): maximum velocity (gm or wm)
         lags (np.array): array of lag times to followers
-        fixed_velocity (bool, optional): followers must receive signal at the 
-            same velocity (used for lead wm/ follower gm, with 
+        fixed_velocity (bool, optional): followers must receive signal at the
+            same velocity (used for lead wm/ follower gm, with
             fixed_gm). Defaults to False.
-        n_steps (int, optional): number of steps used in linspace; a larger 
-            number will increase max/min range but slow down algorithm. 
+        n_steps (int, optional): number of steps used in linspace; a larger
+            number will increase max/min range but slow down algorithm.
             Defaults to 50.
 
     Returns:
@@ -437,14 +437,14 @@ def find_denom_range(
 
 
 def constrain_velocities(min_arr, max_arr, is_gm=False, is_wm=False):
-    """Given min and maximum velocity intervals, constrain them based on 
+    """Given min and maximum velocity intervals, constrain them based on
     physiological conduction velocities.
 
     Args:
         min_arr (np.array): array of minimum velocities
         max_arr (np.array): array of maximum velocities
         is_gm (bool, optional): Use gm constraints. Defaults to False.
-        is_wm (bool, optional): Use white matter constraints. Defaults to 
+        is_wm (bool, optional): Use white matter constraints. Defaults to
             False.
 
     Returns:

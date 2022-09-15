@@ -2,3 +2,5 @@
 notebooks
 __pycache__
 .vscode
+ied_localize.egg-info
+.DS_Store

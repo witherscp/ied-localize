@@ -10,7 +10,6 @@ from warnings import filterwarnings
 filterwarnings("ignore", category=FutureWarning)
 filterwarnings(action="ignore", message="All-NaN slice encountered")
 
-import jaro
 from nilearn import surface
 import numpy as np
 import pandas as pd
@@ -54,8 +53,8 @@ class Subject:
             cutoff (float, optional): the minimum proportion of sequences
                 explained for a cluster to be considered localized. Defaults to
                 0.5.
-            in_progress (bool, optional): Subject still needs to be localized; 
-                do not initialize attributes that have not been created yet. 
+            in_progress (bool, optional): Subject still needs to be localized;
+                do not initialize attributes that have not been created yet.
                 Defaults to False.
         """
 
@@ -584,6 +583,11 @@ class Subject:
             np.array: n_seq x n_seq similarity matrix
         """
 
+        # The jaro package was modified to allow list type instead of requiring
+        # a string. This will need to be manually changed by user, if you want
+        # to run this method.
+        import jaro
+
         seqs, _ = self.fetch_sequences(cluster, all_elecs=True)
         n_sequences = seqs.shape[0]
 
@@ -890,7 +894,7 @@ class Subject:
                 (not just the single best source). Defaults to False.
             rsxn_only (bool, optional): plot only the resection zone. Defaults
                 to False.
-            source_only (bool, optional): plot only the source. Defaults to 
+            source_only (bool, optional): plot only the source. Defaults to
                 False.
 
         Returns:
@@ -1432,7 +1436,7 @@ class Subject:
                 sequences.
 
         Returns:
-            np.array: array of maximum distance between a pair of electrodes 
+            np.array: array of maximum distance between a pair of electrodes
                 for each sequence
         """
 

@@ -21,15 +21,15 @@ rc("font", family="TimesNewRoman")
 
 
 def compute_node2prop_arr(parc2prop_df, parc2node_dict, n_parcs, hemi=None):
-    """Return an array of proportions explained by individual nodes for 
+    """Return an array of proportions explained by individual nodes for
     plotting purposes.
 
     Args:
         parc2prop_df (pd.DataFrame): parcel to proportion dataframe
-        parc2node_dict (dict): keys = parcel number, 
+        parc2node_dict (dict): keys = parcel number,
             values = list of nodes in given parcel
         n_parcs (int): number of parcels (use s.parcs)
-        hemi (str, optional): hemisphere; if set to None, will choose the 
+        hemi (str, optional): hemisphere; if set to None, will choose the
             hemisphere of maximal proportion. Defaults to None.
 
     Returns:
@@ -106,7 +106,9 @@ def plot_prop_explained_histogram(parc2prop, hemi, n_parcs=600):
     ax.set_xlabel("Parcel Number")
     ax.set_ylabel("Proportion of Sequences Explained")
     ax.set_ylim((0, 1))
-    ax.xaxis.set_major_locator(MultipleLocator(5),)
+    ax.xaxis.set_major_locator(
+        MultipleLocator(5),
+    )
     ax.xaxis.set_major_formatter("{x:.0f}")
     ax.xaxis.set_minor_locator(MultipleLocator(1))
     plt.setp(ax.get_xticklabels(), fontsize=6)
