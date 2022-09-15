@@ -17,7 +17,7 @@ setuptools.setup(
         "Programming Language :: Python :: 3",
         "Operating System :: Linux/Unix",
     ],
-    python_requires=">=3.6",
+    python_requires=">=3.7",
     install_requires=[
         "numpy",
         "pandas",
@@ -25,7 +25,7 @@ setuptools.setup(
         "matplotlib",
         "seaborn",
         "pygeodesic",
-        "jaro",
+        "jaro-winkler",
         "scipy",
     ],
     scripts=["ied_localize/do_localize_source.py"],
