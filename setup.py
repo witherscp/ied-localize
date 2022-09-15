@@ -12,7 +12,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/witherscp/ied_localize.git",
-    packages=setuptools.find_packages(),
+    packages=setuptools.find_packages(include=["ied_localize", "ied_localize.*"]),
     classifiers=[
         "Programming Language :: Python :: 3",
         "Operating System :: Linux/Unix",
@@ -27,5 +27,6 @@ setuptools.setup(
         "pygeodesic",
         "jaro-winkler",
         "scipy",
-    ]
+    ],
+    scripts=["ied_localize/do_localize_source.py"],
 )
