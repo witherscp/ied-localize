@@ -27,6 +27,5 @@ setuptools.setup(
         "pygeodesic",
         "jaro-winkler",
         "scipy",
-    ],
-    scripts=["ied_localize/do_localize_source.py"],
+    ]
 )
