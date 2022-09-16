@@ -22,13 +22,13 @@ if __name__ == "__main__":
 
     # parse arguments
     purpose = (
-        "to localize the putative source of interictal spike sequences"
+        "to localize the putative source of interictal spike sequences "
         "using GM, WM, and spike timings"
     )
     parser = ArgumentParser(description=purpose)
     parser.add_argument("subj", help="subject code")
     parser.add_argument(
-        "--only_gm", action="store_true", help="use gm localization only"
+        "--only_gm", action="store_true", help="use gray matter localization only"
     )
     parser.add_argument(
         "--only_wm", action="store_true", help="use white matter localization only"
@@ -36,19 +36,16 @@ if __name__ == "__main__":
     parser.add_argument(
         "--fixed_gm",
         action="store_true",
-        help="fix gm velocity in all directions",
+        help="fix GM velocity in all directions; defaults to variable velocity",
     )
     parser.add_argument(
-        "-p",
-        "--parcs",
-        default=600,
-        help=("number of parcels to use to generate FC matrix;" " defaults to 600"),
+        "-p", "--parcs", default=600, help=("Schaefer parcellation; defaults to 600"),
     )
     parser.add_argument(
         "-n", "--networks", default=17, help="Yeo network {7 or 17}; defaults to 17"
     )
     parser.add_argument(
-        "--dist", default=45, help="gm max search distance; defaults to 45"
+        "--dist", default=45, help="GM max search distance; defaults to 45 mm"
     )
     parser.add_argument(
         "-l", "--max_length", default=10, help="maximum allowable length of a sequence"

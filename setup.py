@@ -4,14 +4,14 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="ied_localize",
+    name="ied-localize",
     version="0.1",
     author="C. Price Withers",
     author_email="price.withers@nih.gov",
-    description="Localize source of IEDs using GM and WM pathways",
+    description="Source Localization of IEDs using GM and WM",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/witherscp/ied_localize.git",
+    url="https://github.com/witherscp/ied-localize.git",
     packages=setuptools.find_packages(include=["ied_localize", "ied_localize.*"]),
     classifiers=[
         "Programming Language :: Python :: 3",

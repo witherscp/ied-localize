@@ -9,14 +9,13 @@ if platform == "darwin":
     NEU_DIR = Path("/Volumes/Shares/NEU")
 elif platform == "linux":
     NEU_DIR = Path("/shares/NEU")
-
 MAIN_DIR = NEU_DIR / "Projects"
-ODIR = NEU_DIR / "Users" / "price"
 
+ODIR = NEU_DIR / "Users" / "price"
 data_directories = {
     "MRI_DIR": MAIN_DIR / "MRI",
     "DTI_DIR": MAIN_DIR / "DTI",
-    "IED_DIR": MAIN_DIR / "iEEG" / "IED_data",
+    "IED_DIR": MAIN_DIR / "iEEG" / "IED",
     "IED_ANALYSIS_DIR": ODIR / "ied_analysis",
 }
 

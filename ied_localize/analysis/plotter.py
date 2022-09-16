@@ -106,9 +106,7 @@ def plot_prop_explained_histogram(parc2prop, hemi, n_parcs=600):
     ax.set_xlabel("Parcel Number")
     ax.set_ylabel("Proportion of Sequences Explained")
     ax.set_ylim((0, 1))
-    ax.xaxis.set_major_locator(
-        MultipleLocator(5),
-    )
+    ax.xaxis.set_major_locator(MultipleLocator(5),)
     ax.xaxis.set_major_formatter("{x:.0f}")
     ax.xaxis.set_minor_locator(MultipleLocator(1))
     plt.setp(ax.get_xticklabels(), fontsize=6)
