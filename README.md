@@ -6,13 +6,13 @@
 </p>
 
 ## Description
-Source code for the localization of interictal epileptiform discharge (IED) sequences. We provide a sample patient (p79) in  [data](https://github.com/witherscp/ied-localize/tree/main/data) directory, as an example of processed file layout. All patient data are available upon reasonable request.
+Source code for the localization of interictal epileptiform discharge (IED) sequences. Patient data will be made available in the future.
 
 ---
 ## Installation
 ```pip install git+https://github.com/witherscp/ied-localize.git```
 
-This installation adds `do_localize_source.py` to the command line for localization of the sample subject (p79). Users may also utilize any functions or methods implemented throughout the package via `import ied_localize`.
+This installation adds `do_localize_source.py` to the command line for localization of the subjects. Users may also utilize any functions or methods implemented throughout the package via `import ied_localize`.
 
 ## Usage
 
@@ -41,4 +41,4 @@ optional arguments:
 ```
 ---
 ## Citation
-### _pending_
+_pending_
