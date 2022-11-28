@@ -800,8 +800,6 @@ class Subject:
 
         maxBL_time = maxBL / MIN_WM_VEL
         minBL_time = minBL / MAX_WM_VEL
-        minBL_time[np.diag_indices_from(minBL_time)] = 0
-        maxBL_time[np.diag_indices_from(maxBL_time)] = 20
 
         return minBL_time, maxBL_time
 
@@ -1374,10 +1372,6 @@ class Subject:
         maxBL = BL + sBL
         minBL = BL - sBL
         minBL[minBL < 0] = 0
-
-        # do not allow intraparcel white matter propagation
-        minBL[np.diag_indices_from(minBL)] = np.NaN
-        maxBL[np.diag_indices_from(maxBL)] = np.NaN
 
         # load min/max geodesic distances
         temp_minGeo = pd.read_csv(
