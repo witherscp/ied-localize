@@ -7,7 +7,6 @@ filterwarnings("ignore", category=RuntimeWarning)
 import numpy as np
 
 from ied_localize.utils.colors import Colors
-from ied_localize.utils.constants import INTRAPARCEL_DISTS
 from ied_localize.utils.helpers import (
     convert_geo_arrays,
     convert_list_to_dict,
@@ -39,7 +38,10 @@ if __name__ == "__main__":
         help="fix GM velocity in all directions; defaults to variable velocity",
     )
     parser.add_argument(
-        "-p", "--parcs", default=600, help=("Schaefer parcellation; defaults to 600"),
+        "-p",
+        "--parcs",
+        default=600,
+        help=("Schaefer parcellation; defaults to 600"),
     )
     parser.add_argument(
         "-n", "--networks", default=17, help="Yeo network {7 or 17}; defaults to 17"
@@ -79,7 +81,6 @@ if __name__ == "__main__":
     odir.mkdir(parents=True, exist_ok=True)
 
     minBL, maxBL, minGeo, maxGeo = s.fetch_minmax_distances()
-    maxBL[np.diag_indices_from(maxBL)] = INTRAPARCEL_DISTS[n_parcs]
 
     parc_minGeo, parc_maxGeo = convert_geo_arrays(s, minGeo, maxGeo)
 
