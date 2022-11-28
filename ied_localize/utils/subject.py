@@ -87,10 +87,10 @@ class Subject:
         self._update_num_clusters()
         self._update_cluster_num_sequences()
         self._update_cluster_hemispheres()
-        self._update_engel_class()
 
         # if localized, update additional attributes
         if not in_progress:
+            self._update_engel_class()
             self._update_cluster_types()
             self._update_source_parcels(
                 dist=dist, use_weighted=use_weighted, use_best=use_best, cutoff=cutoff

@@ -23,7 +23,7 @@ def lead_gm(
     only_gm=False,
     only_wm=False,
     n_steps=10,
-    fixed_gm=False,
+    fixed_gm=True,
 ):
     """Localize the sources of a sequence based on the assumption that the lead
     electrode receives signal via gm spread. Returns a list of unique
@@ -50,7 +50,7 @@ def lead_gm(
             number will increase max/min range but slow down algorithm.
             Defaults to 10.
         fixed_gm (bool, optional): require the same gm conduction
-            velocity in all directions. Defaults to False.
+            velocity in all directions. Defaults to True.
 
     Returns:
         list: list of unique source parcel numbers (if [], no parcels explain
@@ -210,7 +210,7 @@ def lead_wm(
     only_gm=False,
     only_wm=False,
     n_steps=10,
-    fixed_gm=False,
+    fixed_gm=True,
 ):
     """Localize the sources of a sequence based on the assumption that the lead
     electrode receives signal via gm spread. Returns a list of unique
@@ -233,7 +233,7 @@ def lead_wm(
             number will increase max/min range but slow down algorithm.
             Defaults to 10.
         fixed_gm (bool, optional): require the same gm conduction
-            velocity in all directions. Defaults to False.
+            velocity in all directions. Defaults to True.
 
     Returns:
         list: list of unique source parcel numbers (if [], then no parcels

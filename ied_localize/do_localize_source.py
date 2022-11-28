@@ -33,9 +33,9 @@ if __name__ == "__main__":
         "--only_wm", action="store_true", help="use white matter localization only"
     )
     parser.add_argument(
-        "--fixed_gm",
+        "--variable_gm",
         action="store_true",
-        help="fix GM velocity in all directions; defaults to variable velocity",
+        help="allow for variable GM velocity within a sequence; defaults to fixed",
     )
     parser.add_argument(
         "-p",
@@ -61,7 +61,7 @@ if __name__ == "__main__":
     max_length = int(args.max_length)
     only_gm = args.only_gm
     only_wm = args.only_wm
-    fixed_gm = args.fixed_gm
+    fixed_gm = not args.variable_gm  # opposite of variable_gm value
 
     # either run only gm, only white matter, or combination method
     assert not (only_gm and only_wm)
