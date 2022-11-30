@@ -128,7 +128,7 @@ def plot_source_localization(
     surfs=["pial", "inf_200"],
     cmap="Spectral_r",
     dist=45,
-    only_geo=False,
+    only_gm=False,
     only_wm=False,
     lead_elec=False,
 ):
@@ -140,7 +140,7 @@ def plot_source_localization(
         cmap (str, optional): colormap used to display results. Defaults to 'Spectral_r'.
         dist (int, optional): Geodesic search distance in mm. Defaults to
             45.
-        only_geo (bool, optional): Use geodesic only method. Defaults to
+        only_gm (bool, optional): Use gray matter only method. Defaults to
             False.
         only_wm (bool, optional): Use white matter only method. Defaults to
             False.
@@ -157,7 +157,7 @@ def plot_source_localization(
     assert type(surfs) == list
     assert cmap in plt.colormaps()
     assert isinstance(Subj, Subject)
-    assert (only_geo + only_wm + lead_elec) <= 1
+    assert (only_gm + only_wm + lead_elec) <= 1
 
     # load directory names
     surf_dir = Subj.dirs["surf"]
@@ -171,7 +171,7 @@ def plot_source_localization(
             parc2prop = Subj.compute_lead_elec_parc2prop_df(cluster=n_cluster)
         else:
             parc2prop = Subj.fetch_normalized_parc2prop_df(
-                cluster=n_cluster, dist=dist, only_geo=only_geo, only_wm=only_wm
+                cluster=n_cluster, dist=dist, only_gm=only_gm, only_wm=only_wm
             )
 
         node2prop_arr, hemi = compute_node2prop_arr(
