@@ -538,36 +538,29 @@ class Subject:
         engel_fpath = data_directories["IED_ANALYSIS_DIR"] / "ied_subj_engelscores.csv"
         engel_df = pd.read_csv(engel_fpath)
 
-        engel_dict = {
-            "MoreThan24 Engel Class": "MoreThan24 Months",
-            "Mo24 Engel Class": 24,
-            "Mo12 Engel Class": 12,
-        }
+        engel_list = ["Mo24 Engel Class", "Mo12 Engel Class"]
+        engel_months = np.nan
 
         # iterate through engel_df columns from longest time to shortest
-        for col, time in engel_dict.items():
+        for col in engel_list:
             # get class from df
             engel_class = engel_df[engel_df["Patient"] == self.subj][col].iloc[0]
 
-            # set months
-            if type(time) is str:
-                engel_months = engel_df[engel_df["Patient"] == self.subj][time].iloc[0]
-            elif engel_class in ["no_resection", "no_outcome", "deceased"]:
-                engel_months = np.nan
-            else:
-                engel_months = time
+            # patient has no outcome
+            if engel_class in ["no_resection", "no_outcome", "deceased"]:
+                break
 
             # if class is not left blank then set class and months
             try:
+                # patient does not have an engel class at timepoint
                 if isnan(engel_class):
                     continue
+            # patient does have an engel class
             except TypeError:
-                self.engel_class = engel_class
-                self.engel_months = engel_months
-                return
-
-        # since none of the class columns were filled-in, set months to np.NaN
-        engel_months = np.NaN
+                engel_months = engel_df[engel_df["Patient"] == self.subj][
+                    "Months"
+                ].iloc[0]
+                break
 
         self.engel_class = engel_class
         self.engel_months = engel_months
@@ -880,20 +873,25 @@ class Subject:
         all_sources=False,
         rsxn_only=False,
         source_only=False,
+        hemi=None,
     ):
         """Create n_node array with a gray resection zone and green TN/TP
         regions or red FN/FP parcels.
 
         Args:
             n_cluster (int): cluster number
-            source (int): source parcel in range(1, n_parcs+1). Defaults to
-                None which selects the combination source.
+            source (int or list): parcel or list of parcels in
+                range(1, n_parcs+1). Defaults to None which selects the best
+                combination source.
             all_sources (bool, optional): plot every possible source
                 (not just the single best source). Defaults to False.
             rsxn_only (bool, optional): plot only the resection zone. Defaults
                 to False.
             source_only (bool, optional): plot only the source. Defaults to
                 False.
+            hemi (str, optional): hemisphere is automatically chosen based on
+                the hemi of the best source parcel. this allows for manual
+                override by picking from ['LH','RH']. Defaults to None.
 
         Returns:
             tuple: np.array of values for creating niml.dset, str hemisphere
@@ -904,11 +902,16 @@ class Subject:
                 sources = self.valid_sources_all[n_cluster]
             else:
                 sources = self.valid_sources_one[n_cluster]
-        else:
+        elif type(source) is list:
+            for src in source:
+                assert src in range(1, self.parcs + 1)
+            sources = source
+        elif type(source) is int:
             assert source in range(1, self.parcs + 1)
             sources = [source]
 
-        hemi = get_parcel_hemi(list(sources)[0], self.parcs)
+        if hemi == None:
+            hemi = get_parcel_hemi(list(sources)[0], self.parcs)
 
         # retrieve array of 0s (non-resected) and 1s (resected)
         rsxn_arr = (
