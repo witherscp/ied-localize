@@ -198,7 +198,9 @@ def compute_elec2parc_euc(elec2parc_euc_arr, elec_idx, parc):
     return elec2parc_euc_arr[parc - 1, elec_idx]
 
 
-def compute_elec2parc_geo(parc2node_dict, elec2node_geo_arr, elec_idx, parc):
+def compute_elec2parc_geo(
+    parc2node_dict, elec2node_geo_arr, elec_idx, parc, func=np.min
+):
     """Return the geodesic distance between an electrode index and parcel.
 
     Args:
@@ -207,6 +209,9 @@ def compute_elec2parc_geo(parc2node_dict, elec2node_geo_arr, elec_idx, parc):
             distances
         elec_idx (int): electrode index (use: self.get_elec_idx(elec))
         parc (int): parcel number
+        func (function): function applied to array; should be np.min for
+            minimum distances and np.max for maximum distances; defaults to
+            np.min
 
     Returns:
         float: minimum geodesic distance between electrode and parcel
@@ -214,7 +219,7 @@ def compute_elec2parc_geo(parc2node_dict, elec2node_geo_arr, elec_idx, parc):
 
     parc_nodes = parc2node_dict[parc]
 
-    return np.min(elec2node_geo_arr[parc_nodes, elec_idx])
+    return func(elec2node_geo_arr[parc_nodes, elec_idx])
 
 
 def num2roman(num):
