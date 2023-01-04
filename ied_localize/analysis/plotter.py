@@ -131,6 +131,7 @@ def plot_source_localization(
     only_gm=False,
     only_wm=False,
     lead_elec=False,
+    normalize=False,
 ):
     """Run nilearn.plotting.view_surf on a parcel to value df.
 
@@ -146,6 +147,8 @@ def plot_source_localization(
             False.
         lead_elec (bool, optional): Plot lead electrode parcels instead of
             localization results. Defaults to False.
+        normalize (bool, optional): Normalize colormap to a maximum value for the
+            source parcel. Defaults to False.
 
     Returns:
         dict: dictionary with keys = surf names and values = plotting.view_surf
@@ -174,6 +177,9 @@ def plot_source_localization(
                 cluster=n_cluster, dist=dist, only_gm=only_gm, only_wm=only_wm
             )
 
+        if normalize:
+            parc2prop = parc2prop / parc2prop.max()
+
         node2prop_arr, hemi = compute_node2prop_arr(
             parc2prop, Subj.parc2node_dict, Subj.parcs
         )
@@ -199,6 +205,98 @@ def plot_source_localization(
                 bg_map=sulc_array,
                 threshold=0.001,
                 vmax=1,
+            )
+
+            # add to dictionary
+            views[surf] = view
+
+        master_views[n_cluster] = views
+
+    return master_views
+
+
+def plot_source_accuracy(
+    Subj,
+    surfs=["pial", "inf_200"],
+    cmap="bone",
+    dist=45,
+    only_gm=False,
+    only_wm=False,
+    lead_elec=False,
+):
+    """Run nilearn.plotting.view_surf to view resection territory and best
+    source parcel.
+
+    Args:
+        Subj (utils.subject.Subject): instance of Subject class
+        surfs (list, optional): surfaces of interest. Defaults to ['pial','inf_200'].
+        cmap (str, optional): colormap used to display results. Defaults to 'bone'.
+        dist (int, optional): Geodesic search distance in mm. Defaults to
+            45.
+        only_gm (bool, optional): Use gray matter only method. Defaults to
+            False.
+        only_wm (bool, optional): Use white matter only method. Defaults to
+            False.
+        lead_elec (bool, optional): Plot lead electrode parcels instead of
+            localization results. Defaults to False.
+
+    Returns:
+        dict: dictionary with keys = surf names and values = plotting.view_surf
+            views; surface can be saved using views['view'].save_as_html(out_path)
+            or opened in a browser using views['view'].open_in_browser()
+    """
+
+    # check arguments
+    assert type(surfs) == list
+    # assert cmap in plt.colormaps()
+    assert isinstance(Subj, Subject)
+    assert (only_gm + only_wm + lead_elec) <= 1
+
+    # load directory names
+    surf_dir = Subj.dirs["surf"]
+    general_dir = Subj.dirs["general"]
+
+    master_views = {}
+
+    for n_cluster in Subj.valid_clusters:
+
+        if lead_elec:
+            parcel = Subj.compute_lead_elec_parc2prop_df(n_cluster).idxmax().iloc[0]
+        else:
+            parcel = (
+                Subj.fetch_normalized_parc2prop_df(
+                    cluster=n_cluster, dist=dist, only_gm=only_gm, only_wm=only_wm
+                )
+                .idxmax()
+                .iloc[0]
+            )
+
+        rsxn_source_arr, hemi = Subj.compute_rsxn_source_arr(
+            n_cluster,
+            source=parcel,
+        )
+
+        # load array of sulci contours
+        sulc_file = general_dir / f"std.141.{hemi.lower()}.sulc.1D.dset"
+        sulc_array = np.loadtxt(sulc_file, comments="#")
+
+        # initialize dictionary to store views
+        views = {}
+
+        # iterate through surfs
+        for surf in surfs:
+
+            surf_file = surf_dir / f"std.141.{hemi.lower()}.{surf}.gii"
+
+            # plot results
+            view = plotting.view_surf(
+                str(surf_file),
+                rsxn_source_arr,
+                cmap=cmap,
+                symmetric_cmap=False,
+                bg_map=sulc_array,
+                threshold=0.001,
+                vmax=5,
             )
 
             # add to dictionary
