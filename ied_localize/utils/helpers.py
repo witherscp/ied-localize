@@ -3,7 +3,6 @@ from time import time
 
 import numpy as np
 import pandas as pd
-import pygeodesic.geodesic as geodesic
 
 from .colors import Colors
 from .constants import NUM_MAP
@@ -614,6 +613,7 @@ def get_geodesic_dist(source_nodes, target_nodes, pial):
     Returns:
         np.array: array of geodesic distances
     """
+    import pygeodesic.geodesic as geodesic
 
     # run pygeodesic to get geodesic distance between node and all other nodes
     geoalg = geodesic.PyGeodesicAlgorithmExact(pial.coordinates, pial.faces)
