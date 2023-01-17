@@ -127,7 +127,6 @@ def plot_source_localization(
     Subj,
     surfs=["pial", "inf_200"],
     cmap="Spectral_r",
-    dist=45,
     only_gm=False,
     only_wm=False,
     lead_elec=False,
@@ -139,8 +138,6 @@ def plot_source_localization(
         Subj (utils.subject.Subject): instance of Subject class
         surfs (list, optional): surfaces of interest. Defaults to ['pial','inf_200'].
         cmap (str, optional): colormap used to display results. Defaults to 'Spectral_r'.
-        dist (int, optional): Geodesic search distance in mm. Defaults to
-            45.
         only_gm (bool, optional): Use gray matter only method. Defaults to
             False.
         only_wm (bool, optional): Use white matter only method. Defaults to
@@ -174,7 +171,7 @@ def plot_source_localization(
             parc2prop = Subj.compute_lead_elec_parc2prop_df(cluster=n_cluster)
         else:
             parc2prop = Subj.fetch_normalized_parc2prop_df(
-                cluster=n_cluster, dist=dist, only_gm=only_gm, only_wm=only_wm
+                cluster=n_cluster, only_gm=only_gm, only_wm=only_wm
             )
 
         if normalize:
@@ -219,7 +216,6 @@ def plot_source_accuracy(
     Subj,
     surfs=["pial", "inf_200"],
     cmap="bone",
-    dist=45,
     only_gm=False,
     only_wm=False,
     lead_elec=False,
@@ -231,8 +227,6 @@ def plot_source_accuracy(
         Subj (utils.subject.Subject): instance of Subject class
         surfs (list, optional): surfaces of interest. Defaults to ['pial','inf_200'].
         cmap (str, optional): colormap used to display results. Defaults to 'bone'.
-        dist (int, optional): Geodesic search distance in mm. Defaults to
-            45.
         only_gm (bool, optional): Use gray matter only method. Defaults to
             False.
         only_wm (bool, optional): Use white matter only method. Defaults to
@@ -248,7 +242,7 @@ def plot_source_accuracy(
 
     # check arguments
     assert type(surfs) == list
-    # assert cmap in plt.colormaps()
+    assert cmap in plt.colormaps()
     assert isinstance(Subj, Subject)
     assert (only_gm + only_wm + lead_elec) <= 1
 
@@ -261,11 +255,11 @@ def plot_source_accuracy(
     for n_cluster in Subj.valid_clusters:
 
         if lead_elec:
-            parcel = Subj.compute_lead_elec_parc2prop_df(n_cluster).idxmax().iloc[0]
+            parcel = int(Subj.compute_lead_elec_parc2prop_df(n_cluster).idxmax().iloc[0])
         else:
-            parcel = (
+            parcel = int(
                 Subj.fetch_normalized_parc2prop_df(
-                    cluster=n_cluster, dist=dist, only_gm=only_gm, only_wm=only_wm
+                    cluster=n_cluster, only_gm=only_gm, only_wm=only_wm
                 )
                 .idxmax()
                 .iloc[0]

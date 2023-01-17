@@ -93,7 +93,7 @@ class Subject:
             self._update_engel_class()
             self._update_cluster_types()
             self._update_source_parcels(
-                dist=dist, use_weighted=use_weighted, use_best=use_best, cutoff=cutoff
+                use_weighted=use_weighted, use_best=use_best, cutoff=cutoff
             )
             if self.engel_class not in ("no_resection", "no_outcome", "deceased"):
                 self.node2rsxn_df_dict = self._fetch_node2rsxn_df_dict()
@@ -442,7 +442,7 @@ class Subject:
         self.cluster_hemis = cluster_hemi_dict
 
     def _update_source_parcels(
-        self, dist=45, use_weighted=True, use_best=True, cutoff=0.5
+        self, use_weighted=True, use_best=True, cutoff=0.5
     ):
         """Update self.valid_sources_all with a set of every possible source
         for each cluster. Update self.valid_sources_one with a single source
@@ -450,7 +450,6 @@ class Subject:
         lead electrode or has highest proportion explained).
 
         Args:
-            dist (int, optional): geodesic search distance. Defaults to 45.
             use_weighted (bool, optional): For narrowing down sources from all
                 to one, weight all lead electrodes rather than taking the most
                 frequent. Defaults to True.
@@ -466,7 +465,7 @@ class Subject:
 
         for cluster in self.valid_clusters:
 
-            parc2prop_df = self.fetch_normalized_parc2prop_df(cluster, dist=dist)
+            parc2prop_df = self.fetch_normalized_parc2prop_df(cluster)
 
             # get all top source parcels (within 5% of the top source)
             top_parc = parc2prop_df.sort_values(
@@ -685,15 +684,13 @@ class Subject:
         return seqs, delays
 
     def fetch_normalized_parc2prop_df(
-        self, cluster, dist=45, only_gm=False, only_wm=False
+        self, cluster, only_gm=False, only_wm=False
     ):
         """Fetch df with conversion table of parcel number to proportion of
         sequences explained.
 
         Args:
             cluster (int): number of cluster
-            dist (int, optional): Geodesic search distance in mm. Defaults to
-                45.
             only_gm (bool, optional): Use gm only method. Defaults to
                 False.
             only_wm (bool, optional): Use white matter only method. Defaults to
@@ -714,7 +711,7 @@ class Subject:
             method = "_whiteMatter"
 
         fname = (
-            f"*{method}_normalizedCounts_within{dist}_max{self.seq_len}"
+            f"*{method}_normalizedCounts_within{self.dist}_max{self.seq_len}"
             f"_cluster{cluster}.csv"
         )
         fpath_lst = glob(str(self.dirs["source_loc"] / fname))
@@ -1344,7 +1341,7 @@ class Subject:
                 elec_idx = self.elec2index_dict[elec]
                 if use_geo:
                     dist = compute_elec2parc_geo(
-                        self.parc2node_dict, minGeo, elec_idx, source
+                        self.parc2node_dict, minGeo, elec_idx, source, func=np.average
                     )
                 else:
                     dist = compute_elec2parc_euc(
