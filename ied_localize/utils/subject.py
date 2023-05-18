@@ -1117,6 +1117,8 @@ class Subject:
         else:
             assert source in range(1, self.parcs + 1)
 
+        source_hemi = get_parcel_hemi(source, n_parcs=self.parcs)
+
         seqs, _ = self.fetch_sequences(cluster=cluster)
 
         if seq_indices is None:
@@ -1142,9 +1144,14 @@ class Subject:
             for elec in elecs:
                 elec_idx = self.elec2index_dict[elec]
                 if use_geo:
-                    dist = compute_elec2parc_geo(
-                        self.parc2node_dict, minGeo, elec_idx, source
-                    )
+                    elec_hemi = self.elec2hemi_dict[elec]
+                    if elec_hemi == source_hemi:
+                        dist = compute_elec2parc_geo(
+                            self.parc2node_dict, minGeo, elec_idx, source, func=np.average
+                        )
+                    else:
+                        # geodesic distance is meaningless for source contralateral to electrode
+                        dist = np.NaN
                 else:
                     dist = compute_elec2parc_euc(
                         self.parc_minEuclidean_byElec, elec_idx, source
@@ -1244,6 +1251,8 @@ class Subject:
         else:
             assert source in range(1, self.parcs + 1)
 
+        source_hemi = get_parcel_hemi(source, self.parcs)
+
         seqs, delays = self.fetch_sequences(cluster=cluster)
 
         if seq_indices is None:
@@ -1273,9 +1282,14 @@ class Subject:
             for j in range(len(elecs)):
                 elec_idx = self.elec2index_dict[elecs[j]]
                 if use_geo:
-                    dist = compute_elec2parc_geo(
-                        self.parc2node_dict, minGeo, elec_idx, source
-                    )
+                    elec_hemi = self.elec2hemi_dict[elecs[j]]
+                    if elec_hemi == source_hemi:
+                        dist = compute_elec2parc_geo(
+                            self.parc2node_dict, minGeo, elec_idx, source, func=np.min
+                        )
+                    else:
+                        # geodesic distance is meaningless for source contralateral to electrode
+                        dist = np.NaN
                 else:
                     dist = compute_elec2parc_euc(
                         self.parc_minEuclidean_byElec, elec_idx, source
@@ -1315,6 +1329,8 @@ class Subject:
         else:
             assert source in range(1, self.parcs + 1)
 
+        source_hemi = get_parcel_hemi(source, n_parcs=self.parcs)
+
         seqs, _ = self.fetch_sequences(cluster=cluster)
 
         if seq_indices is None:
@@ -1340,9 +1356,14 @@ class Subject:
             for j, elec in enumerate(elecs):
                 elec_idx = self.elec2index_dict[elec]
                 if use_geo:
-                    dist = compute_elec2parc_geo(
-                        self.parc2node_dict, minGeo, elec_idx, source, func=np.average
-                    )
+                    elec_hemi = self.elec2hemi_dict[elec]
+                    if elec_hemi == source_hemi:
+                        dist = compute_elec2parc_geo(
+                            self.parc2node_dict, minGeo, elec_idx, source, func=np.average
+                        )
+                    else:
+                        # geodesic distance is meaningless for source contralateral to electrode
+                        dist = np.NaN
                 else:
                     dist = compute_elec2parc_euc(
                         self.parc_minEuclidean_byElec, elec_idx, source
