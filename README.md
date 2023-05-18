@@ -30,7 +30,7 @@ optional arguments:
   -h, --help            show this help message and exit
   --only_gm             use gray matter localization only
   --only_wm             use white matter localization only
-  --fixed_gm            fix GM velocity in all directions; defaults to variable velocity
+  --variable_gm         allow for variable GM velocity within a sequence; defaults to fixed
   -p PARCS, --parcs PARCS
                         Schaefer parcellation; defaults to 600
   -n NETWORKS, --networks NETWORKS
