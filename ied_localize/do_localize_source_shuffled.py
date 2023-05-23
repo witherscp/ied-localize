@@ -200,15 +200,6 @@ if __name__ == "__main__":
 
             all_source_parcs.append(list(set(seq_sources)))
 
-        # output source parcels
-        opath = odir / (
-            f"{cluster_hemi}{file_str}_sourceParcels_within{s.dist}"
-            f"_max{s.seq_len}_cluster{cluster}_seed{seed}.csv"
-        )
-        out_array = output_lst_of_lsts(all_source_parcs)
-        np.savetxt(opath, X=out_array, delimiter=",", fmt="%f")
-        print(Colors.GREEN, f"Source parcel file created at {opath}", Colors.END)
-
         # output normalized counts
         opath = odir / (
             f"{cluster_hemi}{file_str}_normalizedCounts_within"
