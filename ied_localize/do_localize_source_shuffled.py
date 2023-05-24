@@ -73,15 +73,18 @@ if __name__ == "__main__":
     if only_gm:
         file_str = "_geodesic"
         print_str = "gray matter"
+        folder_suffix = ""
     elif only_wm:
         file_str = "_whiteMatter"
         print_str = "white matter"
+        folder_suffix = "_wm"
     else:
         file_str = ""
         print_str = "combination"
+        folder_suffix = "_combo"
 
     s = Subject(subj, dist=dist, n_parcs=n_parcs, n_networks=n_networks, in_progress=True)
-    odir = s.dirs["source_loc"] / 'shuffles'
+    odir = s.dirs["source_loc"] / f'shuffles_{folder_suffix}'
     odir.mkdir(parents=True, exist_ok=True)
 
     minBL, maxBL, minGeo, maxGeo = s.fetch_minmax_distances()
