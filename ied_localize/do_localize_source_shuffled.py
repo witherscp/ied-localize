@@ -28,7 +28,10 @@ if __name__ == "__main__":
     parser = ArgumentParser(description=purpose)
     parser.add_argument("subj", help="subject code")
     parser.add_argument(
-        "--cluster", default=0, type=int, help="Cluster to localize; defaults to 0 which means all clusters will run."
+        "--cluster",
+        default=0,
+        type=int,
+        help="Cluster to localize; defaults to 0 which means all clusters will run.",
     )
     parser.add_argument(
         "--seed", default=0, type=int, help="Random number generator seed"
@@ -64,7 +67,7 @@ if __name__ == "__main__":
     only_gm = args.only_gm
     only_wm = args.only_wm
     seed = args.seed
-    
+
     random.seed(seed)
 
     # either run only gm, only white matter, or combination method
@@ -83,8 +86,10 @@ if __name__ == "__main__":
         print_str = "combination"
         folder_suffix = "_combo"
 
-    s = Subject(subj, dist=dist, n_parcs=n_parcs, n_networks=n_networks, in_progress=True)
-    odir = s.dirs["source_loc"] / f'shuffles{folder_suffix}'
+    s = Subject(
+        subj, dist=dist, n_parcs=n_parcs, n_networks=n_networks, in_progress=True
+    )
+    odir = s.dirs["source_loc"] / f"shuffles{folder_suffix}"
     odir.mkdir(parents=True, exist_ok=True)
 
     minBL, maxBL, minGeo, maxGeo = s.fetch_minmax_distances()
@@ -153,7 +158,7 @@ if __name__ == "__main__":
                         minBL,
                         maxBL,
                         only_gm=only_gm,
-                        only_wm=only_wm
+                        only_wm=only_wm,
                     )
                     seq_sources = seq_sources + gm_sources
 
@@ -166,7 +171,7 @@ if __name__ == "__main__":
                     minBL,
                     maxBL,
                     only_gm=only_gm,
-                    only_wm=only_wm
+                    only_wm=only_wm,
                 )
                 seq_sources = seq_sources + wm_sources
 
@@ -184,7 +189,7 @@ if __name__ == "__main__":
                     minBL,
                     maxBL,
                     only_gm=only_gm,
-                    only_wm=only_wm
+                    only_wm=only_wm,
                 )
 
                 wm_sources = lead_wm(
@@ -196,7 +201,7 @@ if __name__ == "__main__":
                     minBL,
                     maxBL,
                     only_gm=only_gm,
-                    only_wm=only_wm
+                    only_wm=only_wm,
                 )
 
                 seq_sources = gm_sources + wm_sources

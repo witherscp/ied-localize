@@ -441,9 +441,7 @@ class Subject:
 
         self.cluster_hemis = cluster_hemi_dict
 
-    def _update_source_parcels(
-        self, use_weighted=True, use_best=True, cutoff=0.5
-    ):
+    def _update_source_parcels(self, use_weighted=True, use_best=True, cutoff=0.5):
         """Update self.valid_sources_all with a set of every possible source
         for each cluster. Update self.valid_sources_one with a single source
         for each cluster (choosing the one that is closest to the most frequent
@@ -684,7 +682,7 @@ class Subject:
         return seqs, delays
 
     def fetch_normalized_parc2prop_df(
-        self, cluster, only_gm=False, only_wm=False
+        self, cluster, only_gm=False, only_wm=False, seed=None
     ):
         """Fetch df with conversion table of parcel number to proportion of
         sequences explained.
@@ -705,16 +703,28 @@ class Subject:
         assert not (only_gm and only_wm)
 
         method = ""
+        path_suffix = "_combo"
         if only_gm:
             method = "_geodesic"
+            path_suffix = "_gm"
         elif only_wm:
             method = "_whiteMatter"
+            path_suffix = "_wm"
+
+        if type(seed) is int:
+            file_dir = self.dirs["source_loc"] / f"shuffles{path_suffix}"
+            file_suffix = f"_seed{seed}"
+        elif seed is None:
+            file_dir = self.dirs["source_loc"]
+            file_suffix = ""
+        else:
+            assert False
 
         fname = (
             f"*{method}_normalizedCounts_within{self.dist}_max{self.seq_len}"
-            f"_cluster{cluster}.csv"
+            f"_cluster{cluster}{file_suffix}.csv"
         )
-        fpath_lst = glob(str(self.dirs["source_loc"] / fname))
+        fpath_lst = glob(str(file_dir / fname))
 
         if not (only_gm or only_wm):
             for fpath in fpath_lst:
@@ -1147,7 +1157,11 @@ class Subject:
                     elec_hemi = self.elec2hemi_dict[elec]
                     if elec_hemi == source_hemi:
                         dist = compute_elec2parc_geo(
-                            self.parc2node_dict, minGeo, elec_idx, source, func=np.average
+                            self.parc2node_dict,
+                            minGeo,
+                            elec_idx,
+                            source,
+                            func=np.average,
                         )
                     else:
                         # geodesic distance is meaningless for source contralateral to electrode
@@ -1359,7 +1373,11 @@ class Subject:
                     elec_hemi = self.elec2hemi_dict[elec]
                     if elec_hemi == source_hemi:
                         dist = compute_elec2parc_geo(
-                            self.parc2node_dict, minGeo, elec_idx, source, func=np.average
+                            self.parc2node_dict,
+                            minGeo,
+                            elec_idx,
+                            source,
+                            func=np.average,
                         )
                     else:
                         # geodesic distance is meaningless for source contralateral to electrode

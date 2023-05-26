@@ -27,6 +27,12 @@ if __name__ == "__main__":
     parser = ArgumentParser(description=purpose)
     parser.add_argument("subj", help="subject code")
     parser.add_argument(
+        "--cluster",
+        default=0,
+        type=int,
+        help="Cluster to localize; defaults to 0 which means all clusters will run.",
+    )
+    parser.add_argument(
         "--only_gm", action="store_true", help="use gray matter localization only"
     )
     parser.add_argument(
@@ -76,7 +82,9 @@ if __name__ == "__main__":
         file_str = ""
         print_str = "combination"
 
-    s = Subject(subj, dist=dist, n_parcs=n_parcs, n_networks=n_networks, in_progress=True)
+    s = Subject(
+        subj, dist=dist, n_parcs=n_parcs, n_networks=n_networks, in_progress=True
+    )
     odir = s.dirs["source_loc"]
     odir.mkdir(parents=True, exist_ok=True)
 
@@ -84,8 +92,13 @@ if __name__ == "__main__":
 
     parc_minGeo, parc_maxGeo = convert_geo_arrays(s, minGeo, maxGeo)
 
+    if args.cluster > 0:
+        cluster_list = [args.cluster]
+    else:
+        cluster_list = range(1, s.num_clusters + 1)
+
     # iterate through clusters
-    for cluster in range(1, s.num_clusters + 1):
+    for cluster in cluster_list:
 
         cluster_hemi = s.cluster_hemis[cluster]
 

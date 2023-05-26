@@ -255,7 +255,9 @@ def plot_source_accuracy(
     for n_cluster in Subj.valid_clusters:
 
         if lead_elec:
-            parcel = int(Subj.compute_lead_elec_parc2prop_df(n_cluster).idxmax().iloc[0])
+            parcel = int(
+                Subj.compute_lead_elec_parc2prop_df(n_cluster).idxmax().iloc[0]
+            )
         else:
             parcel = int(
                 Subj.fetch_normalized_parc2prop_df(
