@@ -59,7 +59,9 @@ if __name__ == "__main__":
     only_gm = args.only_gm
     only_wm = args.only_wm
 
-    s = Subject(subj, dist=dist, n_parcs=n_parcs, n_networks=n_networks)
+    s = Subject(
+        subj, dist=dist, n_parcs=n_parcs, n_networks=n_networks, in_progress=True
+    )
 
     cluster_hemi = s.cluster_hemis[cluster]
 
