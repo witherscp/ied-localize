@@ -81,6 +81,11 @@ if __name__ == "__main__":
     else:
         file_str = ""
         print_str = "combination"
+        
+    if fixed_gm:
+        gm_str = ""
+    else:
+        gm_str = "_variableGM"
 
     s = Subject(
         subj, dist=dist, n_parcs=n_parcs, n_networks=n_networks, in_progress=True
@@ -210,7 +215,7 @@ if __name__ == "__main__":
         # output source parcels
         opath = odir / (
             f"{cluster_hemi}{file_str}_sourceParcels_within{s.dist}"
-            f"_max{s.seq_len}_cluster{cluster}.csv"
+            f"_max{s.seq_len}{gm_str}_cluster{cluster}.csv"
         )
         out_array = output_lst_of_lsts(all_source_parcs)
         np.savetxt(opath, X=out_array, delimiter=",", fmt="%f")
@@ -219,7 +224,7 @@ if __name__ == "__main__":
         # output normalized counts
         opath = odir / (
             f"{cluster_hemi}{file_str}_normalizedCounts_within"
-            f"{s.dist}_max{s.seq_len}_cluster{cluster}.csv"
+            f"{s.dist}_max{s.seq_len}{gm_str}_cluster{cluster}.csv"
         )
         sources_dict = convert_list_to_dict(all_source_parcs)
         output_df = output_normalized_counts(seqs.shape[0], sources_dict, s.parcs)

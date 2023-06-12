@@ -43,6 +43,11 @@ if __name__ == "__main__":
         "--only_wm", action="store_true", help="use white matter localization only"
     )
     parser.add_argument(
+        "--variable_gm",
+        action="store_true",
+        help="allow for variable GM velocity within a sequence; defaults to fixed",
+    )
+    parser.add_argument(
         "-p",
         "--parcs",
         default=600,
@@ -67,6 +72,7 @@ if __name__ == "__main__":
     only_gm = args.only_gm
     only_wm = args.only_wm
     seed = args.seed
+    fixed_gm = not args.variable_gm  # opposite of variable_gm value
 
     random.seed(seed)
 
@@ -85,6 +91,11 @@ if __name__ == "__main__":
         file_str = ""
         print_str = "combination"
         folder_suffix = "_combo"
+    
+    if fixed_gm:
+        gm_str = ""
+    else:
+        gm_str = "_variableGM"
 
     s = Subject(
         subj, dist=dist, n_parcs=n_parcs, n_networks=n_networks, in_progress=True
@@ -159,6 +170,7 @@ if __name__ == "__main__":
                         maxBL,
                         only_gm=only_gm,
                         only_wm=only_wm,
+                        fixed_gm=fixed_gm
                     )
                     seq_sources = seq_sources + gm_sources
 
@@ -172,6 +184,7 @@ if __name__ == "__main__":
                     maxBL,
                     only_gm=only_gm,
                     only_wm=only_wm,
+                    fixed_gm=fixed_gm
                 )
                 seq_sources = seq_sources + wm_sources
 
@@ -190,6 +203,7 @@ if __name__ == "__main__":
                     maxBL,
                     only_gm=only_gm,
                     only_wm=only_wm,
+                    fixed_gm=fixed_gm
                 )
 
                 wm_sources = lead_wm(
@@ -202,6 +216,7 @@ if __name__ == "__main__":
                     maxBL,
                     only_gm=only_gm,
                     only_wm=only_wm,
+                    fixed_gm=fixed_gm
                 )
 
                 seq_sources = gm_sources + wm_sources
@@ -211,7 +226,7 @@ if __name__ == "__main__":
         # output normalized counts
         opath = odir / (
             f"{cluster_hemi}{file_str}_normalizedCounts_within"
-            f"{s.dist}_max{s.seq_len}_cluster{cluster}_seed{seed}.csv"
+            f"{s.dist}_max{s.seq_len}{gm_str}_cluster{cluster}_seed{seed}.csv"
         )
         sources_dict = convert_list_to_dict(all_source_parcs)
         output_df = output_normalized_counts(seqs.shape[0], sources_dict, s.parcs)
