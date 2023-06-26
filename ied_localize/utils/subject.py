@@ -117,10 +117,10 @@ class Subject:
         """Add MRI subdirectories."""
 
         for val, dir in [
-            ("surf", "surf/xhemi/std141/orig"),
-            ("general", "surf/xhemi/std141/orig/general"),
-            ("align_elec_alt", "icEEG/align_elec_alt"),
-            ("docs", "icEEG/__docs"),
+            ("surf", "archive/surf/xhemi/std141/orig"),
+            ("general", "archive/surf/xhemi/std141/orig/general"),
+            ("align_elec_alt", "archive/icEEG/align_elec_alt"),
+            ("docs", "archive/icEEG/__docs"),
         ]:
 
             self.dirs[val] = self.dirs["mri"] / dir
@@ -682,7 +682,7 @@ class Subject:
         return seqs, delays
 
     def fetch_normalized_parc2prop_df(
-        self, cluster, only_gm=False, only_wm=False, seed=None
+        self, cluster, only_gm=False, only_wm=False, seed=None, variable_gm=False
     ):
         """Fetch df with conversion table of parcel number to proportion of
         sequences explained.
@@ -710,6 +710,11 @@ class Subject:
         elif only_wm:
             method = "_whiteMatter"
             path_suffix = "_wm"
+            
+        if variable_gm:
+            variable_str='_variableGM'
+        else:
+            variable_str=''
 
         if type(seed) is int:
             file_dir = self.dirs["source_loc"] / f"shuffles{path_suffix}"
@@ -722,7 +727,7 @@ class Subject:
 
         fname = (
             f"*{method}_normalizedCounts_within{self.dist}_max{self.seq_len}"
-            f"_cluster{cluster}{file_suffix}.csv"
+            f"{variable_str}_cluster{cluster}{file_suffix}.csv"
         )
         fpath_lst = glob(str(file_dir / fname))
 
