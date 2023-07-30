@@ -14,8 +14,8 @@ MAIN_DIR = NEU_DIR / "Projects"
 ODIR = NEU_DIR / "Users" / "price"
 data_directories = {
     "MRI_DIR": MAIN_DIR / "MRI",
-    "DTI_DIR": MAIN_DIR / "DTI",
-    "IED_DIR": MAIN_DIR / "iEEG" / "IED",
+    "DTI_DIR": MAIN_DIR / "DWI",
+    "IED_DIR": MAIN_DIR / "iEEG" / "IED_data",
     "IED_ANALYSIS_DIR": ODIR / "ied_analysis",
 }
 

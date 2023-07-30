@@ -710,11 +710,11 @@ class Subject:
         elif only_wm:
             method = "_whiteMatter"
             path_suffix = "_wm"
-            
+
         if variable_gm:
-            variable_str='_variableGM'
+            variable_str = "_variableGM"
         else:
-            variable_str=''
+            variable_str = ""
 
         if type(seed) is int:
             file_dir = self.dirs["source_loc"] / f"shuffles{path_suffix}"

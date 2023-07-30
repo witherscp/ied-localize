@@ -7,7 +7,7 @@ setuptools.setup(
     name="ied-localize",
     version="0.1",
     author="C. Price Withers",
-    author_email="price.withers@nih.gov",
+    author_email="price.withers@gmail.com",
     description="Source Localization of IEDs using GM and WM",
     long_description=long_description,
     long_description_content_type="text/markdown",

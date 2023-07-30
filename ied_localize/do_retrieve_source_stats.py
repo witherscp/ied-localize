@@ -19,18 +19,12 @@ from ied_localize.utils.subject import Subject
 if __name__ == "__main__":
 
     # parse arguments
-    purpose = (
-        "to localize the putative source of interictal spike sequences "
-        "using GM, WM, and spike timings"
-    )
+    purpose = ""
     parser = ArgumentParser(description=purpose)
     parser.add_argument("subj", help="subject code")
     parser.add_argument("--cluster", type=int, help="cluster")
     parser.add_argument(
-        "-p",
-        "--parcs",
-        default=600,
-        help=("Schaefer parcellation; defaults to 600"),
+        "-p", "--parcs", default=600, help=("Schaefer parcellation; defaults to 600"),
     )
     parser.add_argument(
         "-n", "--networks", default=17, help="Yeo network {7 or 17}; defaults to 17"

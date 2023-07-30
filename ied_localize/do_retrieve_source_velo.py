@@ -19,18 +19,12 @@ from ied_localize.utils.subject import Subject
 if __name__ == "__main__":
 
     # parse arguments
-    purpose = (
-        "to localize the putative source of interictal spike sequences "
-        "using GM, WM, and spike timings"
-    )
+    purpose = ""
     parser = ArgumentParser(description=purpose)
     parser.add_argument("subj", help="subject code")
     parser.add_argument("--cluster", type=int, help="cluster")
     parser.add_argument(
-        "-p",
-        "--parcs",
-        default=600,
-        help=("Schaefer parcellation; defaults to 600"),
+        "-p", "--parcs", default=600, help=("Schaefer parcellation; defaults to 600"),
     )
     parser.add_argument(
         "-n", "--networks", default=17, help="Yeo network {7 or 17}; defaults to 17"
@@ -80,8 +74,8 @@ if __name__ == "__main__":
 
     parc_minGeo, parc_maxGeo = convert_geo_arrays(s, minGeo, maxGeo)
 
-    out_file= s.dirs["source_loc"] / f"lead_velocities_cluster{cluster}.csv"
-    
+    out_file = s.dirs["source_loc"] / f"lead_velocities_cluster{cluster}.csv"
+
     if out_file.exists():
         print(
             Colors.YELLOW,
@@ -147,17 +141,15 @@ if __name__ == "__main__":
             maxBL=maxBL,
         )
 
-        dict_for_df.setdefault('seq_idx',[]).append(i)
-        dict_for_df.setdefault('lead_elec',[]).append(elecs[0])
-        dict_for_df.setdefault('min_gm_vel',[]).append(min_gm_vel)
-        dict_for_df.setdefault('max_gm_vel',[]).append(max_gm_vel)
-        dict_for_df.setdefault('min_wm_vel',[]).append(min_wm_vel)
-        dict_for_df.setdefault('max_wm_vel',[]).append(max_wm_vel)
-
+        dict_for_df.setdefault("seq_idx", []).append(i)
+        dict_for_df.setdefault("lead_elec", []).append(elecs[0])
+        dict_for_df.setdefault("min_gm_vel", []).append(min_gm_vel)
+        dict_for_df.setdefault("max_gm_vel", []).append(max_gm_vel)
+        dict_for_df.setdefault("min_wm_vel", []).append(min_wm_vel)
+        dict_for_df.setdefault("max_wm_vel", []).append(max_wm_vel)
 
     df = pd.DataFrame.from_dict(dict_for_df)
 
     df.to_csv(
-        s.dirs["source_loc"] / f"lead_velocities_cluster{cluster}.csv",
-        index=False
+        s.dirs["source_loc"] / f"lead_velocities_cluster{cluster}.csv", index=False
     )

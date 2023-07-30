@@ -30,7 +30,7 @@ if __name__ == "__main__":
         "--cluster",
         default=0,
         type=int,
-        help="Cluster to localize; defaults to 0 which means all clusters will run.",
+        help="cluster to localize; defaults to 0 which means all clusters will run.",
     )
     parser.add_argument(
         "--only_gm", action="store_true", help="use gray matter localization only"
@@ -44,10 +44,7 @@ if __name__ == "__main__":
         help="allow for variable GM velocity within a sequence; defaults to fixed",
     )
     parser.add_argument(
-        "-p",
-        "--parcs",
-        default=600,
-        help=("Schaefer parcellation; defaults to 600"),
+        "-p", "--parcs", default=600, help=("Schaefer parcellation; defaults to 600"),
     )
     parser.add_argument(
         "-n", "--networks", default=17, help="Yeo network {7 or 17}; defaults to 17"
@@ -81,7 +78,7 @@ if __name__ == "__main__":
     else:
         file_str = ""
         print_str = "combination"
-        
+
     if fixed_gm:
         gm_str = ""
     else:

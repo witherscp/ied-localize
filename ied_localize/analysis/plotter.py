@@ -106,9 +106,7 @@ def plot_prop_explained_histogram(parc2prop, hemi, n_parcs=600):
     ax.set_xlabel("Parcel Number")
     ax.set_ylabel("Proportion of Sequences Explained")
     ax.set_ylim((0, 1))
-    ax.xaxis.set_major_locator(
-        MultipleLocator(5),
-    )
+    ax.xaxis.set_major_locator(MultipleLocator(5),)
     ax.xaxis.set_major_formatter("{x:.0f}")
     ax.xaxis.set_minor_locator(MultipleLocator(1))
     plt.setp(ax.get_xticklabels(), fontsize=6)
@@ -267,10 +265,7 @@ def plot_source_accuracy(
                 .iloc[0]
             )
 
-        rsxn_source_arr, hemi = Subj.compute_rsxn_source_arr(
-            n_cluster,
-            source=parcel,
-        )
+        rsxn_source_arr, hemi = Subj.compute_rsxn_source_arr(n_cluster, source=parcel,)
 
         # load array of sulci contours
         sulc_file = general_dir / f"std.141.{hemi.lower()}.sulc.1D.dset"

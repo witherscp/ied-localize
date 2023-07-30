@@ -21,10 +21,7 @@ from ied_localize.utils.subject import Subject
 if __name__ == "__main__":
 
     # parse arguments
-    purpose = (
-        "to localize the putative source of interictal spike sequences "
-        "using GM, WM, and spike timings"
-    )
+    purpose = ""
     parser = ArgumentParser(description=purpose)
     parser.add_argument("subj", help="subject code")
     parser.add_argument(
@@ -48,10 +45,7 @@ if __name__ == "__main__":
         help="allow for variable GM velocity within a sequence; defaults to fixed",
     )
     parser.add_argument(
-        "-p",
-        "--parcs",
-        default=600,
-        help=("Schaefer parcellation; defaults to 600"),
+        "-p", "--parcs", default=600, help=("Schaefer parcellation; defaults to 600"),
     )
     parser.add_argument(
         "-n", "--networks", default=17, help="Yeo network {7 or 17}; defaults to 17"
@@ -91,7 +85,7 @@ if __name__ == "__main__":
         file_str = ""
         print_str = "combination"
         folder_suffix = "_combo"
-    
+
     if fixed_gm:
         gm_str = ""
     else:
@@ -170,7 +164,7 @@ if __name__ == "__main__":
                         maxBL,
                         only_gm=only_gm,
                         only_wm=only_wm,
-                        fixed_gm=fixed_gm
+                        fixed_gm=fixed_gm,
                     )
                     seq_sources = seq_sources + gm_sources
 
@@ -184,7 +178,7 @@ if __name__ == "__main__":
                     maxBL,
                     only_gm=only_gm,
                     only_wm=only_wm,
-                    fixed_gm=fixed_gm
+                    fixed_gm=fixed_gm,
                 )
                 seq_sources = seq_sources + wm_sources
 
@@ -203,7 +197,7 @@ if __name__ == "__main__":
                     maxBL,
                     only_gm=only_gm,
                     only_wm=only_wm,
-                    fixed_gm=fixed_gm
+                    fixed_gm=fixed_gm,
                 )
 
                 wm_sources = lead_wm(
@@ -216,7 +210,7 @@ if __name__ == "__main__":
                     maxBL,
                     only_gm=only_gm,
                     only_wm=only_wm,
-                    fixed_gm=fixed_gm
+                    fixed_gm=fixed_gm,
                 )
 
                 seq_sources = gm_sources + wm_sources

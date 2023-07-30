@@ -6,7 +6,7 @@
 </p>
 
 ## Description
-Source code for the localization of interictal epileptiform discharge (IED) sequences. Patient data will be made available in the future.
+Source code for the localization of interictal epileptiform discharge (IED) sequences. Processed data are available upon request.
 
 ---
 ## Installation
@@ -19,7 +19,7 @@ This installation adds `do_localize_source.py` to the command line for localizat
 
 
 ```
-do_localize_source.py [-h] [--only_gm] [--only_wm] [--fixed_gm] [-p PARCS] [-n NETWORKS] [--dist DIST] [-l MAX_LENGTH] subj
+do_localize_source.py [-h] [--cluster] [--only_gm] [--only_wm] [--variable_gm] [-p PARCS] [-n NETWORKS] [--dist DIST] [-l MAX_LENGTH] subj
 
 to localize the putative source of interictal spike sequences using GM, WM, and spike timings
 
@@ -28,6 +28,7 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
+  --cluster             cluster to localize; defaults to 0 which means all clusters will be localized
   --only_gm             use gray matter localization only
   --only_wm             use white matter localization only
   --variable_gm         allow for variable GM velocity within a sequence; defaults to fixed

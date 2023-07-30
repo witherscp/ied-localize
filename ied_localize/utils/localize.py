@@ -809,7 +809,7 @@ def lead_gm_velocities(
     maxGeo,
     minBL,
     maxBL,
-    n_steps=10
+    n_steps=10,
 ):
     """Localize the sources of a sequence based on the assumption that the lead
     electrode receives signal via gm spread. Returns a list of unique
@@ -944,19 +944,20 @@ def lead_gm_velocities(
 
     convert_node2parc = np.vectorize(Subj.node2parc_hemi_dict[cluster_hemi].get)
     source_parcs = convert_node2parc(source_nodes)
-    
+
     max_vs = smallest_max_v[
         step_indices[source_parcs == source],
         source_nodes[source_parcs == source],
-        shuffle_indices[source_parcs == source]
+        shuffle_indices[source_parcs == source],
     ]
     min_vs = largest_min_v[
         step_indices[source_parcs == source],
         source_nodes[source_parcs == source],
-        shuffle_indices[source_parcs == source]
+        shuffle_indices[source_parcs == source],
     ]
-    
+
     return (np.average(min_vs), np.average(max_vs))
+
 
 def lead_wm_velocities(
     source,
@@ -967,7 +968,7 @@ def lead_wm_velocities(
     parc_maxGeo,
     minBL,
     maxBL,
-    n_steps=10
+    n_steps=10,
 ):
     """Localize the sources of a sequence based on the assumption that the lead
     electrode receives signal via gm spread. Returns a list of unique
@@ -1072,12 +1073,7 @@ def lead_wm_velocities(
         # each index in the second dimension is a different combination
         # of v/combo_v
         shuffled = master_v[
-            :,
-            :,
-            :,
-            range(n_followers),
-            list(product(range(2), repeat=n_followers)),
-            :,
+            :, :, :, range(n_followers), list(product(range(2), repeat=n_followers)), :,
         ]
         min_slice = np.s_[:, :, :, :, :, 0]
         max_slice = np.s_[:, :, :, :, :, 1]
@@ -1091,7 +1087,7 @@ def lead_wm_velocities(
 
         # find any combination that had an overlapping interval for a node
         overlapping = smallest_max_v > largest_min_v
-        
+
         step_one_idxs = np.where(overlapping)[0]
         step_two_idxs = np.where(overlapping)[1]
         source_parc_idxs = np.where(overlapping)[2]
@@ -1099,25 +1095,29 @@ def lead_wm_velocities(
 
         if source_parc_idxs.size == 0:
             continue
-        
+
         max_vs = smallest_max_v[
-            step_one_idxs[source_parc_idxs+1 == source],
-            step_two_idxs[source_parc_idxs+1 == source],
-            source_parc_idxs[source_parc_idxs+1 == source],
-            shuffle_indices[source_parc_idxs+1 == source]
+            step_one_idxs[source_parc_idxs + 1 == source],
+            step_two_idxs[source_parc_idxs + 1 == source],
+            source_parc_idxs[source_parc_idxs + 1 == source],
+            shuffle_indices[source_parc_idxs + 1 == source],
         ]
         min_vs = largest_min_v[
-            step_one_idxs[source_parc_idxs+1 == source],
-            step_two_idxs[source_parc_idxs+1 == source],
-            source_parc_idxs[source_parc_idxs+1 == source],
-            shuffle_indices[source_parc_idxs+1 == source]
+            step_one_idxs[source_parc_idxs + 1 == source],
+            step_two_idxs[source_parc_idxs + 1 == source],
+            source_parc_idxs[source_parc_idxs + 1 == source],
+            shuffle_indices[source_parc_idxs + 1 == source],
         ]
-        
+
         if max_vs.size == 0:
             continue
         else:
-            master_min_vs = np.hstack((master_min_vs,min_vs)) if master_min_vs.size else min_vs
-            master_max_vs = np.hstack((master_max_vs,max_vs)) if master_max_vs.size else max_vs
+            master_min_vs = (
+                np.hstack((master_min_vs, min_vs)) if master_min_vs.size else min_vs
+            )
+            master_max_vs = (
+                np.hstack((master_max_vs, max_vs)) if master_max_vs.size else max_vs
+            )
 
     if master_min_vs.size == 0:
         return np.NaN, np.NaN
