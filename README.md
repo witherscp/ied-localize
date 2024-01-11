@@ -42,4 +42,4 @@ optional arguments:
 ```
 ---
 ## Citation
-_pending_
+C Price Withers, Joshua M Diamond, Braden Yang, Kathryn Snyder, Shervin Abdollahi, Joelle Sarlls, Julio I Chapeton, William H Theodore, Kareem A Zaghloul, Sara K Inati, Identifying sources of human interictal discharges with travelling wave and white matter propagation, _Brain_, Volume 146, Issue 12, December 2023, Pages 5168–5181, https://doi.org/10.1093/brain/awad259
